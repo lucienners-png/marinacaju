@@ -1,0 +1,56 @@
+/* CSS isolado do Fechamento (não altera o resto do sistema) */
+.fechamento{ --bg:#f8fafc; --surface:#ffffff; --text:#0f172a; --muted:#6b7280; --line:#e5e7eb; --brand:#0ea5e9; --shadow:0 10px 28px rgba(15,23,42,.08); --radius:18px; }
+.fechamento *{ box-sizing:border-box }
+.fechamento a{ text-decoration:none; color:inherit }
+
+.fechamento .app-header{
+  position: sticky; top:0; z-index:10;
+  background:#fff;
+  border-bottom:1px solid var(--line);
+  padding:14px 18px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+
+.fechamento .brand{ display:flex; align-items:center; gap:12px; }
+.fechamento .brand #logo{ width:32px; height:32px; object-fit:contain; }
+.fechamento .title{ font-weight:800; font-size:18px; }
+.fechamento .small{ color:var(--muted); font-size:13px; }
+
+.fechamento main{ padding:18px; max-width:980px; margin:0 auto; }
+
+.fechamento .card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px;
+  margin-bottom:16px;
+}
+
+.fechamento .row{ display:flex; align-items:center; gap:10px; }
+.fechamento .badge{ background:#e6f6fd; color:#0369a1; font-weight:700; padding:6px 10px; border-radius:999px; font-size:12px; }
+
+.fechamento .grid{ display:grid; gap:12px; grid-template-columns:1fr 1fr; }
+@media (max-width:740px){ .fechamento .grid{ grid-template-columns:1fr; } }
+
+.fechamento label{ display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+.fechamento input[type="month"], .fechamento select{
+  width:100%; background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:14px; outline:none;
+}
+.fechamento input[type="month"]:focus, .fechamento select:focus{
+  border-color:#c3e8fb; box-shadow:0 0 0 3px rgba(14,165,233,.15);
+}
+
+.fechamento .footer-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+
+.fechamento .btn{ border:1px solid transparent; border-radius:12px; padding:10px 14px; font-weight:700; cursor:pointer;
+  background:var(--brand); color:#fff; font-size:14px; transition:transform .06s ease, box-shadow .2s ease, opacity .2s ease; }
+.fechamento .btn:hover{ transform:translateY(-1px); }
+.fechamento .btn:disabled{ opacity:.6; cursor:not-allowed; }
+.fechamento .btn.ghost{ background:#fff; color:#0f172a; border-color:var(--line); }
+.fechamento .btn.warn{ background:#111827; color:#fff; }
+
+.fechamento pre#preview{
+  background:#fcfdff; border:1px dashed #dbe3ef; border-radius:12px; padding:14px;
+  font-size:14px; line-height:1.5; color:#0b1324; overflow:auto; max-height:60vh; white-space:pre-wrap; font-family:ui-monospace,monospace;
+}

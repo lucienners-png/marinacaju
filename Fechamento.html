@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fechamento do Mês</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+:root{color-scheme:light}
+header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+header .brand{display:flex;align-items:center;gap:12px;font-weight:900}
+header .brand img{height:40px;border-radius:10px}
+header .title{font-size:18px}
+header .small{font-size:12px;color:var(--muted)}
+header .right{margin-left:auto}
+main{max-width:1200px;margin:0 auto;padding:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card+.card{margin-top:12px}
+.grid{display:grid;grid-template-columns:1fr 170px 170px 190px;gap:10px}
+@media (max-width: 980px){ .grid{grid-template-columns:1fr 1fr;} }
+.footer-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 18px;border-radius:999px;font-weight:600;border:1px solid var(--line);cursor:pointer}
+.btn.brand{background:var(--brand);color:#fff;border:none}
+pre{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <img src="../assets/logo.png" onerror="this.style.display='none'">
+    <div>
+      <div class="title">Marina Caju — Sistema Interno</div>
+      <div class="small">Fechamento do mês</div>
+    </div>
+  </div>
+  <div class="right">
+    <a class="btn brand" href="../index.html">Menu</a>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label>Cliente</label>
+        <select id="cliente"></select>
+      </div>
+      <div>
+        <label>Início</label>
+        <input id="ini" type="date">
+      </div>
+      <div>
+        <label>Fim</label>
+        <input id="fim" type="date">
+      </div>
+      <div>
+        <label>Mês embarcações</label>
+        <input id="refMes" type="month">
+      </div>
+    </div>
+    <div class="footer-actions">
+      <button class="btn brand" id="gerar" type="button">Gerar fechamento</button>
+    </div>
+  </div>
+
+  <div class="card" id="res" style="display:none">
+    <pre id="out"></pre>
+  </div>
+</main>
+
+<script>
+(function(){
+  const K_CLI='mc_clientes';
+  const K_CFG='mc_config';
+  const K_FUEL='mc_mov_combustivel';
+  const K_CONV='mc_mov_conveniencia';
+  const K_SRV='mc_mov_servicos';
+
+  const elCliente = document.getElementById('cliente');
+  const elIni = document.getElementById('ini');
+  const elFim = document.getElementById('fim');
+  const elRefMes = document.getElementById('refMes');
+  const elGerarBtn = document.getElementById('gerar');
+  const elRes = document.getElementById('res');
+  const elOut = document.getElementById('out');
+
+  const load = (k) => { try { return JSON.parse(localStorage.getItem(k)) || []; } catch { return []; } };
+  const money = (v) => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  const pad = (n) => String(n).padStart(2,'0');
+
+  function safeISO(v){
+    if(!v) return '';
+    if(typeof v === 'string') return v;
+    try { return new Date(v).toISOString(); } catch { return String(v); }
+  }
+
+  function parseAnyDate(v){
+    if(!v) return null;
+    if(v instanceof Date) return v;
+    if(typeof v === 'number') return new Date(v);
+    const s = String(v);
+
+    // YYYY-MM-DD...
+    if(/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
+
+    // DD/MM/YYYY
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){
+      const [dd,mm,yy] = s.split('/').map(Number);
+      return new Date(yy, mm-1, dd);
+    }
+
+    const d = new Date(s);
+    if(!isNaN(d.getTime())) return d;
+    return null;
+  }
+
+  function inRange(dateValue, iniISO, fimISO){
+    const d = parseAnyDate(dateValue);
+    if(!d || isNaN(d.getTime())) return false;
+    const ini = new Date(iniISO + 'T00:00:00');
+    const fim = new Date(fimISO + 'T23:59:59');
+    return d >= ini && d <= fim;
+  }
+
+  function brData(d){
+    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+  }
+
+  function sortByDateAsc(a,b){
+    const da = parseAnyDate(a?.data) || new Date(0);
+    const db = parseAnyDate(b?.data) || new Date(0);
+    return da - db;
+  }
+
+  function init(){
+    const clientes = load(K_CLI) || [];
+    elCliente.innerHTML = (clientes.length ? clientes : [{id:'',nome:'(sem clientes)'}])
+      .map(c=>`<option value="${c.id}">${c.nome}</option>`)
+      .join('');
+
+    const hoje = new Date();
+    const y = hoje.getFullYear();
+    const m = String(hoje.getMonth()+1).padStart(2,'0');
+    const last = new Date(y, hoje.getMonth()+1, 0).getDate();
+
+    elIni.value = `${y}-${m}-01`;
+    elFim.value = `${y}-${m}-${pad(last)}`;
+    elRefMes.value = `${y}-${m}`;
+
+    elGerarBtn.addEventListener('click', gerarFechamento);
+  }
+
+  function gerarFechamento(){
+    const cliId = elCliente.value;
+    const iniVal = elIni.value;
+    const fimVal = elFim.value;
+
+    if(!cliId) return alert('Selecione um cliente');
+    if(!iniVal || !fimVal) return alert('Selecione início e fim');
+
+    const clientes = load(K_CLI) || [];
+    const cli = clientes.find(c=>c.id===cliId);
+    if(!cli) return alert('Cliente não encontrado');
+
+    const cfgRaw = load(K_CFG);
+    const cfg = (Array.isArray(cfgRaw) ? (cfgRaw[0] || {}) : (cfgRaw || {}));
+
+    let linhas = [];
+    let totalGeral = 0;
+
+    linhas.push(`Olá, ${cli.nome}. Tudo bem?\n\n`);
+    linhas.push(`Encaminhamos abaixo o demonstrativo detalhado de cobrança referente ao período de ${brData(new Date(iniVal+'T00:00:00'))} a ${brData(new Date(fimVal+'T00:00:00'))}.\n\n`);
+
+// EMBARCAÇÕES (mensal)
+const refMes = elRefMes.value; // yyyy-mm
+if(refMes){
+  const [ry, rm] = refMes.split('-').map(Number);
+
+  const veiculos = load('mc_veiculos') || [];
+  const cfgEmb = cfg?.embarcacao || {};
+  const faixas = cfgEmb?.lanchas || [];
+
+  let totalEmb = 0;
+  let linhasEmb = [];
+
+// JET e CANOA — valor fixo mensal
+veiculos
+  .filter(v => (v?.clienteId === cliId || (v?.proprietarios||[]).includes(cliId)))
+  .forEach(v=>{
+    let valor = 0;
+
+if(v.tipo === 'Jet'){
+console.log('DEBUG JET', {
+  clienteRelatorio: cliId,
+  veiculo: v,
+  proprietarios: v.proprietarios,
+  tipoProprietarios: typeof v.proprietarios,
+  isArray: Array.isArray(v.proprietarios)
+});
+  const temCoproprietario = Array.isArray(v.proprietarios) && v.proprietarios.length > 0;
+  const valorBase = Number(cfgEmb?.jet || 0);
+  const valor = temCoproprietario ? valorBase / 2 : valorBase;
+
+  linhasEmb.push(`Jet — ${money(valor)}\n`);
+  totalEmb += valor;
+}
+
+if(v.tipo === 'Canoa'){
+  const temCoproprietario = Array.isArray(v.proprietarios) && v.proprietarios.length > 0;
+  const valorBase = Number(cfgEmb?.canoa || 0);
+  const valor = temCoproprietario ? valorBase / 2 : valorBase;
+
+  linhasEmb.push(`Canoa — ${money(valor)}\n`);
+  totalEmb += valor;
+}
+
+
+    if(valor > 0){
+      totalEmb += valor;
+    }
+  });
+
+  veiculos
+    .filter(v => (v?.clienteId === cliId || (v?.proprietarios||[]).includes(cliId)) && v?.pes)
+    .forEach(v=>{
+      const pes = Number(v.pes);
+      let valorPe = 0;
+
+      if(pes <= 24) valorPe = faixas[0];
+      else if(pes <= 29) valorPe = faixas[1];
+      else if(pes <= 34) valorPe = faixas[2];
+      else if(pes <= 39) valorPe = faixas[3];
+      else valorPe = faixas[4];
+
+      const valor = pes * valorPe;
+      totalEmb += valor;
+
+      linhasEmb.push(
+        `Lancha ${pes} pés — ${money(valorPe)} por pé = ${money(valor)}\n`
+      );
+    });
+
+  if(linhasEmb.length){
+    linhas.push('🚤 Embarcações\n');
+    linhas.push(...linhasEmb);
+    linhas.push(
+      `Total embarcações: ${money(totalEmb)}\n\n`
+    );
+    totalGeral += totalEmb;
+  }
+}
+
+    // GASOLINA (ordenado)
+    const fuels = (load(K_FUEL)||[])
+      .filter(f => f?.clienteId===cliId && inRange(f?.data, iniVal, fimVal))
+      .slice()
+      .sort(sortByDateAsc);
+
+    if(fuels.length){
+      linhas.push('⛽ Gasolina\n');
+      let litros = 0;
+
+      fuels.forEach(f=>{
+        const d = parseAnyDate(f.data) || new Date();
+        const dia = `${pad(d.getDate())}/${pad(d.getMonth()+1)}`;
+        const l = Number(f.litros)||0;
+        litros += l;
+        linhas.push(`Dia ${dia} – ${f.desc||'Abastecimento'} — ${l} L (Resp.: ${f.responsavel||'—'})\n`);
+      });
+
+      const precoVenda = Number(cfg?.combustiveis?.gasolina)||0;
+      const totalSetor = litros * precoVenda;
+      linhas.push(`Total gasolina: ${litros} L × ${money(precoVenda)} = ${money(totalSetor)}\n\n`);
+      totalGeral += totalSetor;
+    }
+
+    // SERVIÇOS (ordenado)
+    const servs = (load(K_SRV)||[])
+      .filter(s => s?.clienteId===cliId && inRange(s?.data, iniVal, fimVal))
+      .slice()
+      .sort(sortByDateAsc);
+
+if(servs.length){
+  linhas.push('🛠️ Serviços\n');
+  let totalServ = 0;
+
+  servs.forEach(s=>{
+    const d = parseAnyDate(s.data) || new Date();
+    const dia = `${pad(d.getDate())}/${pad(d.getMonth()+1)}`;
+    const tot = Number(s.total)||0;
+    linhas.push(`Dia ${dia} – ${s.descricao||'Serviço'} — ${money(tot)}\n`);
+    totalServ += tot;
+  });
+
+  linhas.push(`Total serviços: ${money(totalServ)}\n\n`);
+  totalGeral += totalServ;
+}
+
+    // CONVENIÊNCIA (ordenado)
+    const convs = (load(K_CONV)||[])
+      .filter(c => c?.clienteId===cliId && inRange(c?.data, iniVal, fimVal))
+      .slice()
+      .sort(sortByDateAsc);
+
+if(convs.length){
+  linhas.push('🏪 Conveniência\n');
+  let totalConv = 0;
+
+  convs.forEach(c=>{
+    const d = parseAnyDate(c.data) || new Date();
+    const dia = `${pad(d.getDate())}/${pad(d.getMonth()+1)}`;
+    const qtd = Number(c.qtd ?? c.quantidade ?? 1);
+    const unit = Number(c.valorUnit ?? c.unit ?? c.preco ?? 0);
+    const tot = Number(c.total ?? (qtd * unit));
+    linhas.push(`Dia ${dia} – ${c.descricao||'Item de conveniência'} — ${qtd} un × ${money(unit)} = ${money(tot)}\n`);
+    totalConv += tot;
+  });
+
+  linhas.push(`Total conveniência: ${money(totalConv)}\n\n`);
+  totalGeral += totalConv;
+}
+
+    linhas.push(`💰 TOTAL GERAL: ${money(totalGeral)}\n`);
+    linhas.push('\n');
+    linhas.push('Conta para pagamento:\n'); 
+    linhas.push('💲 Sicoob (conta empresa)\n');
+    linhas.push('Agência 3171 – Banco 756\n');
+    linhas.push('Número da conta 37.170-0\n');
+    linhas.push('Armazém das Meninas das Gerais\n');
+    linhas.push('CNPJ: 43.860.520/0001-87\n');
+    linhas.push('Chave PIX: 43860520000187\n\n');
+    linhas.push('Agradecemos pela confiança e permanecemos à disposição para qualquer esclarecimento.\n\n');
+    linhas.push('Atenciosamente,\n');
+    linhas.push('Armazém das Meninas das Gerais\n');
+
+
+    elOut.textContent = linhas.join('');
+    elRes.style.display = 'block';
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

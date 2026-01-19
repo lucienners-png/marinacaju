@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrada de Combustível</title>
+
+<link rel="stylesheet" href="../assets/style.css">
+
+<style>
+  #menuBtn{ text-decoration:none !important; }
+  header .brand img#logo{ height:40px; width:auto; display:block; }
+
+  .chip{
+    display:inline-block;
+    background:#f3f4f6;
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:12px;
+  }
+  .footer-actions{margin-top:12px}
+
+  .btn.danger{
+    background:#fff;
+    border:1px solid #fecaca;
+    color:#b91c1c;
+  }
+
+  .modal{
+    position:fixed; inset:0;
+    background:rgba(2,6,23,.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:60;
+  }
+  .modal.open{display:flex}
+  .modal .box{
+    width:min(520px,96vw);
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+    position:relative;
+    box-shadow:0 20px 60px rgba(2,6,23,.35)
+  }
+  .modal h4{
+    margin:0 0 10px;
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--muted)
+  }
+  .modal .close{
+    position:absolute;
+    top:10px;
+    right:10px;
+    border:1px solid var(--line);
+    background:var(--surface);
+    border-radius:8px;
+    padding:4px 8px;
+    cursor:pointer;
+  }
+  .formgrid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+  .footer{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <img id="logo" alt="Logo" src="../assets/logo.png">
+    <div>
+      <div class="title">Marina Caju — Sistema Interno</div>
+      <div class="small">Entrada de combustível (Gasolina)</div>
+    </div>
+  </div>
+  <div class="right">
+    <a class="btn brand" id="menuBtn" href="../index.html">Menu</a>
+  </div>
+</header>
+
+<main>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;">
+      <div class="badge">Registrar entrada</div>
+      <span class="chip">Estoque único • Cálculo automático</span>
+    </div>
+
+    <div class="grid" style="margin-top:12px">
+      <div>
+        <label>Data</label>
+        <input id="e_data" type="date">
+      </div>
+      <div>
+        <label>Litros</label>
+        <input id="e_litros" type="number" step="0.001" min="0">
+      </div>
+      <div>
+        <label>Valor total pago (R$)</label>
+        <input id="e_valor" type="number" step="0.01" min="0">
+      </div>
+      <div>
+        <label>Observação</label>
+        <input id="e_obs">
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn brand" id="add">Adicionar entrada</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="row"><div class="badge">Estoque atual</div></div>
+    <div class="row" style="margin-top:12px;gap:18px">
+      <label style="font-weight:600">Gasolina</label>
+      <input id="stk_g" readonly style="max-width:220px">
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="row"><div class="badge">Histórico de entradas</div></div>
+    <table class="table" id="tbl">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Litros</th>
+          <th>Valor pago</th>
+          <th>Custo/L</th>
+          <th>Obs</th>
+          <th style="width:1%">Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+</main>
+
+<div class="modal" id="modalEdit">
+  <div class="box">
+    <button class="close" id="closeEdit">✕</button>
+    <h4>Editar entrada</h4>
+
+    <div class="formgrid">
+      <div>
+        <label>Data</label>
+        <input id="ed_data" type="date">
+      </div>
+      <div>
+        <label>Litros</label>
+        <input id="ed_litros" type="number" step="0.001" min="0">
+      </div>
+    </div>
+
+    <div class="formgrid">
+      <div>
+        <label>Valor pago (R$)</label>
+        <input id="ed_valor" type="number" step="0.01" min="0">
+      </div>
+      <div>
+        <label>Observação</label>
+        <input id="ed_obs">
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="btn" id="cancelEdit">Cancelar</button>
+      <button class="btn brand" id="saveEdit">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const K_MOV = 'mc_mov_combustivel';
+let EDIT_ID = null;
+
+function load(k,d){ try{return JSON.parse(localStorage.getItem(k)) ?? d}catch{return d} }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v)) }
+function uid(){ return 'id_'+Date.now().toString(36)+Math.random().toString(36).slice(2,8) }
+function fmtLitros(v){ v=Number(v)||0; return Number.isInteger(v)?v:v.toFixed(3).replace(/\.?0+$/,'') }
+function fmtMoney(v){ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) }
+
+function estoqueAtualGasolina(){
+  return load(K_MOV,[]).reduce((s,m)=>{
+    if(m.tipoMov==='entrada') return s+Number(m.litros||0);
+    if(m.tipoMov==='saida') return s-Number(m.litros||0);
+    return s;
+  },0);
+}
+
+function render(){
+  document.getElementById('stk_g').value = fmtLitros(estoqueAtualGasolina())+' L';
+  const tb=document.querySelector('#tbl tbody');
+  tb.innerHTML='';
+  load(K_MOV,[])
+    .filter(m=>m.tipoMov==='entrada')
+    .slice()
+    .reverse()
+    .forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td>${new Date(r.dataISO).toLocaleDateString()}</td>
+        <td>${fmtLitros(r.litros)}</td>
+        <td>${fmtMoney(r.valorTotalPago)}</td>
+        <td>${fmtMoney(r.precoCustoLitro)}</td>
+        <td>${r.obs||''}</td>
+        <td>
+          <div style="display:flex;gap:8px;">
+            <button class="btn" data-edit="${r.id}">Editar</button>
+            <button class="btn danger" data-del="${r.id}">Excluir</button>
+          </div>
+        </td>`;
+      tb.appendChild(tr);
+    });
+}
+
+document.getElementById('add').onclick=()=>{
+  const dataDia = document.getElementById('e_data').value || new Date().toISOString().slice(0,10);
+  const dataISO = new Date(dataDia+'T12:00:00').toISOString();
+  const litros=+document.getElementById('e_litros').value||0;
+  const valor=+document.getElementById('e_valor').value||0;
+  const obs=document.getElementById('e_obs').value.trim();
+  if(litros<=0||valor<=0) return alert('Preencha litros e valor');
+
+  const mov=load(K_MOV,[]);
+  mov.push({
+    id:uid(),
+    tipoMov:'entrada',
+    dataISO,
+    dataDia,
+    litros,
+    valorTotalPago:valor,
+    precoCustoLitro:valor/litros,
+    obs
+  });
+  save(K_MOV,mov);
+
+  document.getElementById('e_litros').value='';
+  document.getElementById('e_valor').value='';
+  document.getElementById('e_obs').value='';
+  render();
+};
+
+document.getElementById('tbl').onclick=e=>{
+  const ed=e.target.closest('[data-edit]');
+  const del=e.target.closest('[data-del]');
+
+  if(ed){
+    const r=load(K_MOV,[]).find(m=>m.id===ed.dataset.edit);
+    if(!r) return;
+    EDIT_ID=r.id;
+    document.getElementById('ed_data').value=r.dataDia;
+    document.getElementById('ed_litros').value=r.litros;
+    document.getElementById('ed_valor').value=r.valorTotalPago;
+    document.getElementById('ed_obs').value=r.obs||'';
+    document.getElementById('modalEdit').classList.add('open');
+  }
+
+  if(del){
+    if(!confirm('Excluir esta entrada?')) return;
+    save(K_MOV,load(K_MOV,[]).filter(m=>m.id!==del.dataset.del));
+    render();
+  }
+};
+
+document.getElementById('closeEdit').onclick=
+document.getElementById('cancelEdit').onclick=()=>{
+  document.getElementById('modalEdit').classList.remove('open');
+};
+
+document.getElementById('saveEdit').onclick=()=>{
+  const litros=+document.getElementById('ed_litros').value||0;
+  const valor=+document.getElementById('ed_valor').value||0;
+  if(litros<=0||valor<=0) return alert('Valores inválidos');
+
+  const dataDia=document.getElementById('ed_data').value;
+  const dataISO=new Date(dataDia+'T12:00:00').toISOString();
+
+  const mov=load(K_MOV,[]);
+  const idx=mov.findIndex(m=>m.id===EDIT_ID);
+  if(idx>=0){
+    mov[idx]={
+      ...mov[idx],
+      dataISO,
+      dataDia,
+      litros,
+      valorTotalPago:valor,
+      precoCustoLitro:valor/litros,
+      obs:document.getElementById('ed_obs').value.trim()
+    };
+    save(K_MOV,mov);
+  }
+  document.getElementById('modalEdit').classList.remove('open');
+  render();
+};
+
+render();
+</script>
+
+</body>
+</html>

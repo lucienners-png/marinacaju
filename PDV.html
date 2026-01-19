@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PDV</title>
+
+  <link rel="stylesheet" href="../assets/style.css">
+
+  <style>
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{overflow-x:hidden}
+    :root{color-scheme:light}
+
+    /* Header igual ao Clientes */
+    .title{font-size:18px; font-weight:700}
+    .small{font-size:12px; color:var(--muted)}
+    #menuBtn{text-decoration:none !important}
+
+    /* Grid principal */
+    main{max-width:1200px; margin:0 auto; padding:14px}
+    .wrap{display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:14px}
+    @media(max-width:1100px){ .wrap{grid-template-columns:1fr} }
+
+    /* Cards */
+    .card{background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--card-shadow); padding:12px}
+    .card + .card{margin-top:12px}
+
+    /* Cliente */
+    .client-row{display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:end}
+    @media(max-width:780px){ .client-row{grid-template-columns:1fr 1fr} }
+    .client-title{font-weight:900; font-size:14px; color:var(--muted); margin-bottom:6px}
+
+    /* Scanner */
+    .scan-row{display:grid; grid-template-columns:1fr; gap:10px; align-items:end}
+    #scan{height:48px; font-size:18px}
+
+    /* Badges */
+    .badges{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+    .badge{
+      display:inline-flex; gap:8px; align-items:center;
+      padding:4px 8px; border:1px solid var(--line);
+      border-radius:999px; font-size:12px; color:var(--muted);
+      background:transparent;
+    }
+    #cli_name_inline b{color:var(--text)}
+
+    /* Tabela */
+    .table-wrap{border-radius:10px; overflow:auto}
+    .table{width:100%; border-collapse:separate; border-spacing:0; table-layout:auto}
+    .table thead th{
+      padding:6px; font-size:12px; color:var(--muted);
+      border-bottom:1px solid var(--line); text-align:left; white-space:nowrap
+    }
+    .table tbody td{padding:6px; border-bottom:1px solid var(--line); vertical-align:middle; font-size:14px}
+    .col-item{min-width:180px}
+    .col-qtd{width:120px}
+    .col-preco{width:90px}
+    .col-subt{width:110px}
+    .col-cmd{width:80px}
+
+    /* Quantidade */
+    .qbtn{display:inline-flex; gap:6px; align-items:center}
+    .qbtn .stept{
+      min-width:24px; height:24px; border:1px solid var(--line);
+      border-radius:8px; background:var(--surface); font-weight:900; cursor:pointer; line-height:1
+    }
+    .qbtn strong{min-width:20px; text-align:center; font-size:13px}
+
+    /* Total */
+    .totline{
+      margin-top:10px; padding:8px 10px;
+      border:1px solid var(--line); border-radius:12px;
+      display:flex; gap:14px; align-items:center; font-size:13px; color:var(--muted);
+      justify-content:flex-end
+    }
+    .totline b{color:var(--text); font-size:16px}
+
+    /* Painel direito */
+    .panel .block{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px}
+    .panel .block + .block{margin-top:12px}
+    .bigbtn{
+      width:100%; height:46px; border-radius:10px; font-weight:900; cursor:pointer;
+      display:inline-flex; align-items:center; justify-content:center; text-decoration:none
+    }
+    .bigbtn.brand{background:var(--brand); color:#06233b; border:1px solid color-mix(in oklab,var(--brand) 35%, var(--line))}
+    .bigbtn.ghost{background:transparent; border:1px solid var(--line); color:var(--text)}
+
+    /* Modais */
+    .modal{
+      position:fixed; inset:0; background:rgba(2,6,23,.45);
+      display:none; align-items:center; justify-content:center; z-index:60;
+    }
+    .modal.open{ display:flex; }
+    .modal .box{
+      width:min(760px,96vw); background:var(--surface);
+      border:1px solid var(--line); border-radius:16px; padding:16px; position:relative;
+      box-shadow:0 20px 60px rgba(2,6,23,.35)
+    }
+    .modal h4{margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)}
+    .hide{display:none !important}
+
+    .modal .close{
+      position:absolute; top:10px; right:10px;
+      border:1px solid var(--line); background:var(--surface);
+      border-radius:8px; padding:4px 8px; font-size:12px; cursor:pointer;
+    }
+
+    .optgrid{display:grid; gap:10px; grid-template-columns:repeat(3,1fr); margin-bottom:10px}
+    .opt{border:1px solid var(--line); border-radius:14px; padding:14px; text-align:center; cursor:pointer}
+    .opt:hover{border-color:color-mix(in oklab,var(--brand) 40%, var(--line))}
+    .formgrid{display:grid; gap:10px; grid-template-columns:1fr 1fr}
+    .formgrid-3{display:grid; gap:10px; grid-template-columns:1fr 1fr 1fr}
+    .modal .footer{display:flex; gap:10px; justify-content:flex-end; margin-top:10px}
+
+    /* Lista de cupons */
+    .cupons-list{max-height:360px; overflow:auto; border:1px solid var(--line); border-radius:12px}
+    .cupom-item{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:10px; border-bottom:1px solid var(--line)}
+    .cupom-item:last-child{border-bottom:none}
+    .cupom-meta{font-size:12px; color:var(--muted)}
+    .cupom-ttl{font-weight:800}
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <div>
+      <div class="title">Marina Caju — Sistema Interno</div>
+      <div class="small">PDV — Não fiscal</div>
+    </div>
+  </div>
+  <div class="right">
+    <a class="btn brand" id="menuBtn" href="../index.html">Menu</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ESQUERDA -->
+  <section>
+    <!-- Cliente -->
+    <div class="card">
+      <div class="client-title">Cliente selecionado</div>
+      <div class="client-row">
+        <div>
+          <label>Buscar cliente</label>
+          <input id="cli_search" placeholder="Digite para filtrar">
+        </div>
+        <div>
+          <label>Cliente</label>
+          <select id="cli"></select>
+        </div>
+        <button class="btn ghost" id="btnLimpaCli">Limpar cliente</button>
+      </div>
+    </div>
+
+    <!-- Scanner + badges -->
+    <div class="card">
+      <div class="scan-row">
+        <div>
+          <label>Código de barras</label>
+          <input id="scan" placeholder="Bipe o código e pressione Enter">
+        </div>
+      </div>
+      <div class="badges">
+        <span class="badge">🗓️ <span id="compraData">Data da compra: —</span></span>
+        <button type="button" class="badge" id="pickData" title="Definir data e hora manualmente">🕒 Definir data</button>
+        <span class="badge" id="cliBadge" title="—">👤 <span id="cli_name_inline">Cliente: <b>—</b></span></span>
+      </div>
+    </div>
+
+    <!-- Itens + TOTAL -->
+    <div class="card">
+      <div class="table-wrap">
+        <table class="table" id="tbl">
+          <thead>
+            <tr>
+              <th class="col-item">Item</th>
+              <th class="col-qtd">Qtd/Litros</th>
+              <th class="col-preco">Preço</th>
+              <th class="col-subt">Subtotal</th>
+              <th class="col-cmd"></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="totline" id="totline">
+        <span>TOTAL: <b id="sumTotal">R$ 0,00</b></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIREITA -->
+  <aside class="panel">
+    <div class="block">
+      <div>
+        <label>Forma de pagamento</label>
+        <select id="formaPagamento">
+          <option value="faturado" selected>Faturado</option>
+          <option value="pix">Pix</option>
+          <option value="dinheiro">Dinheiro</option>
+        </select>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <button class="bigbtn brand" id="openBuscar">Buscar item</button>
+      <div style="height:8px"></div>
+      <button class="bigbtn brand" id="fecharConta">Salvar</button>
+      <div style="height:8px"></div>
+      <button class="bigbtn ghost" id="imprimir">Imprimir</button>
+      <div style="height:8px"></div>
+      <button class="bigbtn ghost" id="limpar">Limpar cupom</button>
+    </div>
+
+    <div class="block">
+      <div class="small">“Salvar” grava e imprime este cupom. “Imprimir” abre a lista para escolher cupons salvos.</div>
+    </div>
+  </aside>
+</main>
+
+<!-- MODAL: Selecionar tipo de lançamento -->
+<div class="modal" id="modalTipo">
+  <div class="box">
+    <button class="close" id="closeTipo" aria-label="Fechar">✕</button>
+    <h4>Selecionar tipo de lançamento</h4>
+    <div class="optgrid">
+      <div class="opt" data-tab="prod">🛒 Conveniência</div>
+      <div class="opt" data-tab="comb">⛽ Combustível</div>
+      <div class="opt" data-tab="serv">🛠️ Serviço</div>
+    </div>
+
+    <!-- PRODUTO -->
+    <div id="tab_prod" class="hide">
+      <div class="formgrid">
+        <div><label>Buscar</label><input id="p_busca" placeholder="Nome"></div>
+        <div><label>Selecionar</label><select id="p_sel"></select></div>
+      </div>
+      <div class="formgrid">
+        <div><label>Preço</label><input id="p_preco" disabled></div>
+        <div><label>Estoque</label><input id="p_estoque" disabled placeholder="—"></div>
+      </div>
+      <div class="formgrid">
+        <div><label>Quantidade</label><input id="p_qtd" type="number" step="1"></div>
+      </div>
+      <div class="footer"><button class="bigbtn brand" id="add_produto">Adicionar ao cupom</button></div>
+    </div>
+
+    <!-- COMBUSTÍVEL -->
+    <div id="tab_comb" class="hide">
+      <div class="formgrid-3">
+        <div><label>Tipo</label><select id="f_tipo" disabled><option value="gasolina" selected>Gasolina</option></select></div>
+        <div><label>Litros</label><input id="f_litros" type="number" step="0.001" value="1"></div>
+        <div><label>Preço/Litro</label><input id="f_preco" disabled></div>
+      </div>
+      <div class="formgrid-3">
+        <div><label>Serviços Gerais?</label><select id="f_sg"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
+        <div><label>Responsável</label><input id="f_resp" placeholder="Ex.: Claudinei"></div>
+        <div><label>Descrição</label><input id="f_desc" placeholder="(opcional)"></div>
+      </div>
+      <div class="formgrid">
+        <div><label>Veículo (opcional)</label><select id="veic"><option value="">— nenhum —</option></select></div>
+      </div>
+      <div class="footer"><button class="bigbtn brand" id="add_comb">Adicionar combustível</button></div>
+    </div>
+
+    <!-- SERVIÇO -->
+    <div id="tab_serv" class="hide">
+      <div class="formgrid-3">
+        <div><label>Serviço</label><select id="s_sel"></select></div>
+        <div><label>Quantidade</label><input id="s_qtd" type="number" step="0.5"></div>
+        <div><label>Preço</label><input id="s_preco" disabled></div>
+      </div>
+      <div class="formgrid">
+        <div><label>Data</label><input id="s_data" type="datetime-local"></div>
+        <div><label>Obs</label><input id="s_obs"></div>
+      </div>
+      <div class="footer"><button class="bigbtn brand" id="add_serv">Adicionar serviço</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Definir data da compra -->
+<div class="modal" id="modalData">
+  <div class="box">
+    <button class="close" id="closeDataX" aria-label="Fechar">✕</button>
+    <h4>Definir data da compra</h4>
+    <div class="formgrid">
+      <div>
+        <label>Data e hora</label>
+        <input id="dataInput" type="datetime-local">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button class="bigbtn ghost" id="useNow">Usar agora</button>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="bigbtn ghost" id="cancelData">Cancelar</button>
+      <button class="bigbtn brand" id="applyData">Usar esta data</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Escolher cupom para imprimir -->
+<div class="modal" id="modalCupons">
+  <div class="box">
+    <button class="close" id="closeCuponsX" aria-label="Fechar">✕</button>
+    <h4>Selecionar cupom para imprimir</h4>
+    <div class="cupons-list" id="cupomList"></div>
+    <div class="footer">
+      <button class="bigbtn ghost" id="closeCupons">Fechar</button>
+      <button class="bigbtn brand" id="printSelected">Imprimir selecionado</button>
+    </div>
+  </div>
+</div>
+<script src="../assets/supabase.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  /* Keys */
+  const K_CLI='mc_clientes', K_PROD='mc_produtos', K_BAR='mc_prod_bar_index';
+  const K_VEI='mc_veiculos', K_CFG='mc_config', K_FUEL='mc_stock';
+  const K_MOV_C='mc_mov_conveniencia', K_MOV_F='mc_mov_combustivel', K_MOV_S='mc_mov_servicos';
+  const K_SERV='mc_servicos_catalog';
+  const K_SALES='mc_pdv_vendas';
+  const K_MOV_EST='mc_mov_estoque';
+
+  /* Helpers */
+  const $=s=>document.querySelector(s);
+  function load(k,def){ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? def; }catch{return def} }
+  function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+  function fmt(n){ return 'R$ '+Number(n||0).toFixed(2).replace('.',','); }
+  const uid = ()=>'id-'+Math.random().toString(36).slice(2,9)+'-'+Date.now();
+  function nowISO(){ return new Date().toISOString(); }
+  const pad=n=>String(n).padStart(2,'0');
+  function toDM(d){ const x=new Date(d); const dd=pad(x.getDate()); const mm=pad(x.getMonth()+1); return `${dd}-${mm}`; }
+  function toInputLocal(iso){
+    const d = iso ? new Date(iso) : new Date();
+    const y = d.getFullYear();
+    const m = pad(d.getMonth()+1);
+    const da = pad(d.getDate());
+    const h = pad(d.getHours());
+    const mi = pad(d.getMinutes());
+    return `${y}-${m}-${da}T${h}:${mi}`;
+  }
+
+
+  /* Data da compra */
+  let compraDataISO=null;
+  function setCompraDataIfNeeded(){
+    if(!compraDataISO){ compraDataISO = nowISO(); }
+    const d=new Date(compraDataISO);
+    $('#compraData').textContent =
+      `Data da compra: ${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function resetCompraData(){ compraDataISO=null; $('#compraData').textContent = 'Data da compra: —'; }
+
+  /* Cliente inline */
+  function setClientInline(text){
+    const el=$('#cli_name_inline'); const badge=$('#cliBadge');
+    const name = text || '—';
+    el.innerHTML = 'Cliente: <b>' + name + '</b>'; badge.title = name;
+  }
+  function showCliName(){
+    const sel=$('#cli'); const opt = sel && sel.selectedOptions[0];
+    const name = opt ? opt.textContent : '—';
+    setClientInline(name); resetCompraData();
+  }
+
+  /* Preenche clientes */
+function fillClientes(q=''){
+  const all = load(K_CLI, []);
+
+  // 🔹 ORDENAÇÃO ALFABÉTICA DEFINITIVA
+  all.sort((a, b) =>
+    (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' })
+  );
+
+  const qq = (q || '').toString().trim().toLowerCase();
+  const list = qq
+    ? all.filter(c => ((c.nome || '') + '').toLowerCase().includes(qq))
+    : all;
+
+    $('#cli').innerHTML =
+      '<option value="" disabled selected>Selecione...</option>' +
+      '<option value="VISITANTE">Cliente Visitante</option>' +
+      list.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+
+    if(qq && list.length>0){
+      $('#cli').value = list[0].id;
+      setClientInline(list[0].nome);
+    }else{
+      $('#cli').value = '';
+      setClientInline('—');
+    }
+    fillVeiculos();
+  }
+
+  function fillVeiculos(){
+    const cid=$('#cli').value;
+    const vs=load(K_VEI,[]).filter(v=>v.clienteId===cid || (v.proprietarios||[]).includes(cid));
+    const el=$('#veic');
+    if(el){
+      el.innerHTML = '<option value="">— nenhum —</option>' +
+        (vs||[]).map(v=>`<option value="${v.id}">${v.tipo}${v.pes?' '+v.pes+' pés':''}</option>`).join('');
+    }
+  }
+
+  $('#cli_search').addEventListener('input', e=>{
+    const val = (e.target.value||'').trim();
+    fillClientes(val);
+    if(!val){
+      $('#cli').value = '';
+      setClientInline('—');
+    }
+  });
+  $('#cli').addEventListener('change', ()=>{ showCliName(); fillVeiculos(); });
+  $('#btnLimpaCli').onclick=()=>{ $('#cli').value=''; setClientInline('—'); };
+
+  /* Reset UI Produtos */
+  function resetProdutoUI(){
+    const p_busca = $('#p_busca');
+    const p_sel   = $('#p_sel');
+    const p_preco = $('#p_preco');
+    const p_estoq = $('#p_estoque');
+    const p_qtd   = $('#p_qtd');
+    if(p_busca) p_busca.value = '';
+    if(p_sel){ p_sel.selectedIndex = 0; p_sel.value = ''; }
+    if(p_preco) p_preco.value = '';
+    if(p_estoq) p_estoq.value = '';
+    if(p_qtd)   p_qtd.value   = '';
+  }
+
+  /* Modal tipo lançamento */
+  const modal=$('#modalTipo');
+  const openModal=()=>{ modal.classList.add('open'); showTab('prod'); fillCatalog(''); resetProdutoUI(); };
+  const closeModal=()=>{ modal.classList.remove('open'); };
+  $('#openBuscar').addEventListener('click', e=>{ e.preventDefault(); openModal(); });
+  modal.addEventListener('click', e=>{ if(e.target.classList.contains('modal')) closeModal(); });
+  document.getElementById('closeTipo').onclick=closeModal;
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+  document.querySelectorAll('.opt').forEach(op=>{
+    op.addEventListener('click',()=>{
+      showTab(op.dataset.tab);
+      if(op.dataset.tab==='prod'){ fillCatalog(''); resetProdutoUI(); }
+    });
+  });
+
+  function showTab(t){
+    ['prod','comb','serv'].forEach(k=>$('#tab_'+k).classList.add('hide'));
+    $('#tab_'+t).classList.remove('hide');
+    if(t==='prod') $('#p_busca').focus();
+    if(t==='comb'){
+  refreshFuelUI();
+  $('#f_litros').focus();
+}
+    if(t==='serv') $('#s_sel').focus();
+  }
+
+  /* Estoque por movimentos */
+  function movEst(){ return load(K_MOV_EST,[]); }
+  function estoqueAtual(produtoId){
+    return movEst().filter(m=>m.produtoId===produtoId).reduce((s,m)=>s + Number(m.delta||0), 0);
+  }
+  function registrarMovimento(produtoId, delta, motivo='venda_pdv', origem=null, extra={}){
+    const arr = movEst();
+    arr.push({ id: uid(), ts: Date.now(), produtoId, delta, motivo, origem, ...extra });
+    save(K_MOV_EST, arr);
+  }
+  function registrarMovimentoPorBar(bar, delta, motivo='venda_pdv', origem=null, extra={}){
+    const idx = load(K_BAR,{});
+    const prods = load(K_PROD,[]);
+    const id = idx[bar];
+    if(!id) return {ok:false,msg:'Produto não encontrado'};
+    const p = prods.find(x=>x.id===id);
+    if(!p) return {ok:false,msg:'Produto não encontrado'};
+    registrarMovimento(id, delta, motivo, origem, {bar, ...extra});
+    return {ok:true};
+  }
+
+  /* Catálogo produtos */
+  function fillCatalog(q=''){
+    const all=load(K_PROD,[]);
+    const list=q ? all.filter(p=>(p.nome||'').toLowerCase().includes(q.toLowerCase())) : all;
+
+    $('#p_sel').innerHTML =
+      '<option value="" disabled selected>Selecione...</option>' +
+      list.map(p=>`<option value="${p.id}" data-preco="${p.preco}">${p.nome}</option>`).join('');
+
+    if(q && list.length>0){
+      $('#p_sel').value = list[0].id;
+      updateProdInfo();
+    }else{
+      $('#p_sel').value = '';
+      $('#p_preco').value=''; $('#p_estoque').value=''; $('#p_qtd').value='';
+    }
+  }
+
+  function updateProdInfo(){
+    const sel=$('#p_sel');
+    const opt=sel && sel.value ? sel.selectedOptions[0] : null;
+    if(!opt){
+      $('#p_preco').value=''; $('#p_estoque').value=''; if(!$('#p_qtd').value) $('#p_qtd').value='';
+      return;
+    }
+    const id=opt.value;
+    $('#p_preco').value = +opt.dataset.preco || 0;
+    $('#p_estoque').value = String(estoqueAtual(id));
+    if(!$('#p_qtd').value) $('#p_qtd').value = '1';
+  }
+
+  $('#p_busca').addEventListener('input', e=>{
+    const val=(e.target.value||'').trim();
+    fillCatalog(val);
+  });
+  $('#p_sel').addEventListener('change', updateProdInfo);
+
+  /* Carrinho */
+  let carrinho=[];
+  function pushItem(i){ carrinho.push({ ...i, total:i.qtd*i.preco }); render(); }
+
+  function render(){
+    const tb=$('#tbl tbody');
+    tb.innerHTML='';
+    let total=0;
+
+    carrinho.forEach((i,ix)=>{
+      total+=i.total;
+      const tr=document.createElement('tr');
+      tr.innerHTML=
+        `<td class="col-item">${i.item}</td>
+         <td class="col-qtd">
+           <div class="qbtn">
+             <button class="stept" data-act="sub" data-ix="${ix}">−</button>
+             <strong>${(Number(i.qtd)||0).toString()}</strong>
+             <button class="stept" data-act="add" data-ix="${ix}">+</button>
+           </div>
+         </td>
+         <td class="col-preco">${fmt(i.preco)}</td>
+         <td class="col-subt">${fmt(i.total)}</td>
+         <td class="col-cmd"><button class="btn ghost" data-act="del" data-ix="${ix}">Excluir</button></td>`;
+      tb.appendChild(tr);
+    });
+
+    $('#sumTotal').textContent=fmt(total);
+  }
+
+  document.addEventListener('click', e=>{
+    const act=e.target?.dataset?.act;
+    if(!act) return;
+    const i=+e.target.dataset.ix;
+    const it=carrinho[i];
+    if(!it) return;
+
+    if(act==='add'){ it.qtd=Number(it.qtd)+1; it.total=it.qtd*it.preco; }
+    if(act==='sub'){ it.qtd=Math.max(1, Number(it.qtd)-1); it.total=it.qtd*it.preco; }
+    if(act==='del'){ carrinho.splice(i,1); }
+    render();
+  });
+
+  /* Scanner produto — sem trava de estoque */
+  $('#scan').addEventListener('keydown', e=>{
+    if(e.key!=='Enter') return;
+    e.preventDefault();
+    const code=e.target.value.trim();
+    e.target.value='';
+
+    const idx=load(K_BAR,{});
+    const id=idx[code];
+    if(!id) return alert('Produto não encontrado');
+    if(!$('#cli').value){ alert('Selecione o cliente antes de lançar.'); return; }
+
+    const prod=load(K_PROD,[]).find(p=>p.id===id);
+    if(!prod) return alert('Inválido');
+
+    setCompraDataIfNeeded();
+    pushItem({item:prod.nome, tipo:'Produto', qtd:1, preco:+prod.preco||0, meta:{prodId:id, bar:code}});
+  });
+
+  /* Produto: adicionar — sem trava de estoque */
+  $('#add_produto').onclick=()=>{
+    const opt=$('#p_sel').selectedOptions[0];
+    if(!opt || !$('#p_sel').value) return alert('Selecione um produto');
+    if(!$('#cli').value) return alert('Selecione o cliente');
+
+    const id=opt.value, nome=opt.textContent, preco=+opt.dataset.preco, qtd=+(($('#p_qtd').value)||1);
+    setCompraDataIfNeeded();
+
+    const idx=load(K_BAR,{});
+    const bar = Object.entries(idx).find(([,v])=>v===id)?.[0] || null;
+
+    pushItem({item:nome, tipo:'Produto', qtd, preco, meta:{prodId:id, bar}});
+    fillCatalog('');
+    resetProdutoUI();
+    $('#p_busca').focus();
+  };
+
+  /* Combustível (gasolina fixa) */
+  function fuelPrice(tipo){
+  const cfg = load(K_CFG,{});
+  const v = cfg?.combustiveis?.[tipo];
+  return Number(v) || 0;
+}
+  function fuelStock(tipo){ return +(load(K_FUEL,{gasolina:0})[tipo]||0); }
+  function setFuel(tipo,val){ const s=load(K_FUEL,{gasolina:0}); s[tipo]=val; save(K_FUEL,s); }
+
+  (function setFuelUI(){
+    const cfg=load(K_CFG,{});
+    const p=+(cfg.combustiveis?.gasolina||0);
+    const el=$('#f_preco');
+    if(el) el.value=p;
+  })();
+
+  $('#add_comb').onclick=()=>{
+    if(!$('#cli').value) return alert('Selecione o cliente');
+
+    const tipo='gasolina';
+    const litros=+$('#f_litros').value||0;
+    if(litros<=0) return alert('Litros > 0');
+
+    const preco=fuelPrice(tipo), est=fuelStock(tipo);
+    setFuel(tipo, est-litros);
+
+    const veicEl = $('#veic');
+    const veicId = veicEl ? (veicEl.value || null) : null;
+    const veicTxt = veicEl ? ((veicEl.selectedOptions[0]?.textContent) || '') : '';
+
+    const sg = $('#f_sg').value === 'sim';
+    const resp = ($('#f_resp').value||'').trim();
+
+    if(!resp){
+      alert('Informe o responsável pelo abastecimento.');
+      return;
+    }
+
+    // PDV LIMPO:
+    // - Descrição só entra se você digitar
+    // - "Serviços Gerais" só entra porque você marcou SIM
+    const descInput = ($('#f_desc').value||'').trim();
+
+    // Salva movimento combustível
+    const mov=load(K_MOV_F,[]);
+    const dataMov = compraDataISO || nowISO();
+    mov.push({
+      id: uid(),
+      data: dataMov,
+      clienteId: $('#cli').value,
+      tipo,
+      litros,
+      desc: descInput,           // só o que foi digitado
+      responsavel: resp,
+      veiculoId: veicId,
+      servicosGerais: sg,
+      preco
+    });
+    save(K_MOV_F,mov);
+
+    setCompraDataIfNeeded();
+
+    // Label no cupom (limpo e previsível)
+    const parts = ['Gasolina'];
+    if(sg) parts.push('Serviços Gerais');
+    if(descInput) parts.push(descInput);
+
+    const label =
+      `${parts.join(' — ')} | Resp: ${resp}` +
+      (veicId ? ` (${veicTxt})` : '');
+
+    pushItem({
+      item: label,
+      tipo: 'Combustível',
+      qtd: litros,
+      preco,
+      meta: { tipo, veicTxt, responsavel: resp, servicosGerais: sg, desc: descInput }
+    });
+
+    // Reset campos
+    $('#f_litros').value='1';
+    $('#f_resp').value='';
+    $('#f_desc').value='';
+    $('#f_sg').value='nao';
+    if($('#veic')) $('#veic').value='';
+
+    closeModal();
+  };
+
+  /* Serviços */
+  function ensureServDefaults(){
+    const cur=load(K_SERV,null);
+    if(Array.isArray(cur) && cur.length) return cur;
+    const seed=[
+      {id:'srv1', desc:'Atendimento fora do horário (por hora)', val:250},
+      {id:'srv2', desc:'Limpeza extra de embarcação', val:150},
+      {id:'srv3', desc:'Resgate e socorro (por hora)', val:250},
+    ];
+    save(K_SERV, seed);
+    return seed;
+  }
+
+  function fillServ(){
+    const all=ensureServDefaults();
+    $('#s_sel').innerHTML =
+      '<option value="" disabled selected>Selecione...</option>' +
+      all.map(s=>`<option value="${s.id}" data-preco="${s.val}">${s.desc}</option>`).join('');
+    $('#s_preco').value='';
+    $('#s_qtd').value='';
+  }
+
+  $('#s_sel').addEventListener('change', ()=>{
+    const opt=$('#s_sel').selectedOptions[0];
+    if(!opt || !$('#s_sel').value){ $('#s_preco').value=''; return; }
+    $('#s_preco').value=opt.dataset.preco;
+    if(!$('#s_qtd').value) $('#s_qtd').value='1';
+  });
+
+  $('#add_serv').onclick=()=>{
+    if(!$('#cli').value) return alert('Selecione o cliente');
+    if(!$('#s_sel').value) return alert('Selecione o serviço');
+
+    const opt=$('#s_sel').selectedOptions[0];
+    const qtd=+($('#s_qtd').value||1);
+    const preco=+opt.dataset.preco;
+    const desc=opt.textContent;
+
+    const dtIn = $('#s_data').value;
+    if(dtIn && !compraDataISO){
+      const parts = dtIn.split(/[-T:]/).map(Number);
+      const asLocal = new Date(parts[0], parts[1]-1, parts[2], parts[3]||0, parts[4]||0);
+      compraDataISO = asLocal.toISOString();
+    }
+
+    setCompraDataIfNeeded();
+    pushItem({item:desc, tipo:'Serviço', qtd, preco, meta:{obs:($('#s_obs').value||'').trim()}});
+
+    $('#s_qtd').value='1';
+    closeModal();
+  };
+
+  /* Modal Data */
+  const modalData = $('#modalData');
+  const openData = ()=>{
+    modalData.classList.add('open');
+    const val = compraDataISO ? toInputLocal(compraDataISO) : toInputLocal();
+    $('#dataInput').value = val;
+  };
+  const closeData = ()=> modalData.classList.remove('open');
+
+  document.getElementById('pickData').addEventListener('click', (e)=>{ e.preventDefault(); openData(); });
+  document.getElementById('closeDataX').onclick = closeData;
+  document.getElementById('cancelData').onclick = closeData;
+  modalData.addEventListener('click', e=>{ if(e.target.classList.contains('modal')) closeData(); });
+
+  document.getElementById('useNow').onclick = (e)=>{
+    e.preventDefault();
+    $('#dataInput').value = toInputLocal();
+  };
+  document.getElementById('applyData').onclick = ()=>{
+    const val = $('#dataInput').value;
+    if(!val){ alert('Escolha uma data.'); return; }
+    const parts = val.split(/[-T:]/).map(Number);
+    const d = new Date(parts[0], parts[1]-1, parts[2], parts[3]||0, parts[4]||0);
+    compraDataISO = d.toISOString();
+    document.getElementById('compraData').textContent =
+      `Data da compra: ${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    closeData();
+  };
+
+  /* SALVAR / MOVIMENTOS / ESTOQUE / IMPRESSÃO */
+  function makeVendaObjeto(){
+    const cliVal = $('#cli').value || null;
+    if(!cliVal){ alert('Selecione o cliente.'); return null; }
+
+    const clienteTipo = (cliVal === 'VISITANTE') ? 'visitante' : 'cliente';
+    const clienteId   = (cliVal === 'VISITANTE') ? null : cliVal;
+
+    const data = compraDataISO || nowISO();
+    let total=0;
+
+    const itens = carrinho.map(it=>({
+      tipo: it.tipo,
+      item: it.item,
+      qtd: +it.qtd,
+      preco: +it.preco,
+      subtotal: +(it.qtd*it.preco),
+      meta: it.meta||{}
+    }));
+
+    itens.forEach(i=> total += i.subtotal);
+
+    const formaPagamento = (document.getElementById('formaPagamento')?.value) || 'faturado';
+    return { id: uid(), data, clienteId, clienteTipo, formaPagamento, itens, total };
+  }
+
+  function salvarVendaAtual(){
+    if(!carrinho.length){ alert('Adicione itens ao cupom.'); return null; }
+    const venda = makeVendaObjeto();
+    if(!venda) return null;
+
+    const vendas = load(K_SALES,[]);
+    vendas.push(venda);
+    save(K_SALES, vendas);
+
+    const conv = load(K_MOV_C,[]);
+    const srv  = load(K_MOV_S,[]);
+
+    venda.itens.forEach(it=>{
+      if(it.tipo==='Produto'){
+        conv.push({ id: uid(), data: venda.data, clienteId: venda.clienteId, descricao: it.item, qtd: it.qtd, valorUnit: it.preco, total: it.subtotal });
+      }else if(it.tipo==='Serviço'){
+        srv.push({ id: uid(), data: venda.data, clienteId: venda.clienteId, descricao: it.item, qtd: it.qtd, valorUnit: it.preco, total: it.subtotal, obs: it.meta?.obs || '' });
+      }
+      // Combustível já foi gravado no lançamento
+    });
+
+    save(K_MOV_C, conv);
+    save(K_MOV_S, srv);
+
+    return venda;
+  }
+async function salvarVendaSupabase(venda){
+  const { error } = await supabase
+    .from('vendas')
+    .insert([{
+      total: venda.total,
+      forma_pagamento: venda.formaPagamento,
+      detalhes: venda
+    }]);
+
+  if(error){
+    alert('Erro ao salvar no Supabase');
+    console.error(error);
+    return false;
+  }
+  return true;
+}
+
+
+  function aplicarBaixaEstoque(venda){
+    venda.itens.forEach(it=>{
+      if(it.tipo==='Produto'){
+        const prodId = it.meta?.prodId || null;
+        const bar = it.meta?.bar || null;
+        if(prodId) registrarMovimento(prodId, -Number(it.qtd||0), 'venda_pdv', venda.id, {bar});
+        else if(bar) registrarMovimentoPorBar(bar, -Number(it.qtd||0), 'venda_pdv', venda.id, {});
+      }
+    });
+  }
+
+  function printVenda(venda){
+    const clientes = load(K_CLI,[]);
+    const nomeCli = (clientes.find(c=>c.id===venda.clienteId)||{}).nome || (venda.clienteTipo==='visitante' ? 'Cliente Visitante' : '—');
+
+    const d=new Date(venda.data);
+    const when=`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+    const linhas = venda.itens.map(i=>`
+      <tr>
+        <td>${i.item} <small style="color:#64748b">(${i.tipo})</small></td>
+        <td style="text-align:right">${i.qtd}</td>
+        <td style="text-align:right">${fmt(i.preco)}</td>
+        <td style="text-align:right">${fmt(i.subtotal)}</td>
+      </tr>`).join('');
+
+    const html = `
+<!doctype html><html><head><meta charset="utf-8">
+<title>Cupom — ${nomeCli}</title>
+<style>
+  body{font-family:system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif; padding:18px}
+  h1{font-size:16px;margin:0}
+  .muted{color:#64748b;font-size:12px}
+  table{width:100%; border-collapse:collapse; margin-top:12px}
+  th,td{padding:6px; border-bottom:1px solid #e5e7eb; font-size:13px}
+  th{text-align:left; color:#64748b}
+  tfoot td{font-weight:700}
+  .head{display:flex;justify-content:space-between;align-items:center}
+  .head img{height:36px; object-fit:contain}
+  .total{font-size:16px}
+  @media print{ .noprint{display:none} }
+  .noprint{margin-top:14px}
+  .right{ text-align:right }
+</style>
+</head><body>
+  <div class="head">
+    <div>
+      <h1>Marina Caju — Cupom</h1>
+      <div class="muted">Cliente: <b>${nomeCli}</b> • ${when} • Nº ${venda.id}</div>
+    </div>
+    <img src="../assets/logo.png" onerror="this.style.display='none'">
+  </div>
+  <table>
+    <thead><tr><th>Item</th><th class="right">Qtd</th><th class="right">Preço</th><th class="right">Subtotal</th></tr></thead>
+    <tbody>${linhas}</tbody>
+    <tfoot><tr><td colspan="3" class="right total">TOTAL</td><td class="right total">${fmt(venda.total)}</td></tr></tfoot>
+  </table>
+  <div class="noprint">
+    <button onclick="window.print()">Imprimir</button>
+  </div>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    try { w.focus(); w.print(); } catch(e){}
+  }
+
+  function resetPDV(keepClient=true){
+    carrinho=[]; render(); resetCompraData();
+
+    const scan=$('#scan'); if(scan) scan.value='';
+
+    // Produtos
+    const p_busca=$('#p_busca'); if(p_busca) p_busca.value='';
+    const p_sel=$('#p_sel'); if(p_sel){ p_sel.innerHTML='<option value="" disabled selected>Selecione...</option>'; p_sel.value=''; }
+    const p_preco=$('#p_preco'); if(p_preco) p_preco.value='';
+    const p_estoque=$('#p_estoque'); if(p_estoque) p_estoque.value='';
+    const p_qtd=$('#p_qtd'); if(p_qtd) p_qtd.value='';
+
+    // Combustível
+    const cfg=load(K_CFG,{});
+    const p=+(cfg.combustiveis?.gasolina||0);
+    const f_preco=$('#f_preco'); if(f_preco) f_preco.value=p||'';
+    const f_litros=$('#f_litros'); if(f_litros) f_litros.value='1';
+    const f_resp=$('#f_resp'); if(f_resp) f_resp.value='';
+    const f_desc=$('#f_desc'); if(f_desc) f_desc.value='';
+    const f_sg=$('#f_sg'); if(f_sg) f_sg.value='nao';
+    const veic=$('#veic'); if(veic) veic.value='';
+
+    // Serviços
+    const s_sel=$('#s_sel'); if(s_sel){ fillServ(); s_sel.value=''; }
+    const s_qtd=$('#s_qtd'); if(s_qtd) s_qtd.value='';
+    const s_preco=$('#s_preco'); if(s_preco) s_preco.value='';
+    const s_data=$('#s_data'); if(s_data) s_data.value='';
+    const s_obs=$('#s_obs'); if(s_obs) s_obs.value='';
+
+    // Forma pagamento
+    const fp = document.getElementById('formaPagamento');
+    if(fp) fp.value='faturado';
+
+    if(keepClient){
+      showCliName();
+    }else{
+      const search=$('#cli_search'); if(search) search.value='';
+      fillClientes('');
+      $('#cli').value='';
+      setClientInline('—');
+      fillVeiculos();
+    }
+  }
+
+document.getElementById('fecharConta').onclick = async ()=>{
+  const v = salvarVendaAtual();
+  if(!v) return;
+
+  const imprimir = confirm('Venda salva. Deseja imprimir o cupom?');
+
+if(imprimir){
+  printVenda(v);
+  resetPDV(false); // 👈 LIMPA NA HORA
+} else {
+  resetPDV(false);
+}
+
+await salvarVendaSupabase(v);
+aplicarBaixaEstoque(v);
+
+};
+
+  /* Modal cupons */
+  const modalCupons=$('#modalCupons');
+  const openCupons=()=>{ modalCupons.classList.add('open'); };
+  const closeCupons=()=>{ modalCupons.classList.remove('open'); };
+  modalCupons.addEventListener('click', e=>{ if(e.target.classList.contains('modal')) closeCupons(); });
+  document.getElementById('closeCupons').onclick=closeCupons;
+  document.getElementById('closeCuponsX').onclick=closeCupons;
+
+  function renderCupomList(){
+    const listEl=$('#cupomList');
+    listEl.innerHTML='';
+
+    const vendas=load(K_SALES,[]);
+    const cid=$('#cli').value||null;
+    const hojeDM=toDM(new Date());
+
+    const fil=vendas
+      .filter(v=> cid ? v.clienteId===cid : toDM(v.data)===hojeDM )
+      .sort((a,b)=>new Date(b.data)-new Date(a.data));
+
+    if(fil.length===0){
+      listEl.innerHTML='<div class="cupom-item"><div class="cupom-meta">Nenhum cupom salvo encontrado.</div></div>';
+      return;
+    }
+
+    fil.forEach((v,ix)=>{
+      const clienteNome=(load(K_CLI,[]).find(c=>c.id===v.clienteId)||{}).nome || (v.clienteTipo==='visitante' ? 'Cliente Visitante' : '—');
+      const itens=v.itens.length;
+      const d=new Date(v.data);
+      const when=`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+      const line=document.createElement('div');
+      line.className='cupom-item';
+      line.innerHTML=
+        `<input type="radio" name="selCupom" value="${v.id}" ${ix===0?'checked':''}>
+         <div>
+           <div class="cupom-ttl">${clienteNome}</div>
+           <div class="cupom-meta">${when} • ${itens} item(ns) • Total ${fmt(v.total)}</div>
+         </div>
+         <div>${fmt(v.total)}</div>`;
+      listEl.appendChild(line);
+    });
+  }
+
+  document.getElementById('imprimir').onclick=()=>{ renderCupomList(); openCupons(); };
+  document.getElementById('printSelected').onclick=()=>{
+    const sel=document.querySelector('input[name="selCupom"]:checked');
+    if(!sel){ alert('Selecione um cupom.'); return; }
+    const vendas=load(K_SALES,[]);
+    const v=vendas.find(x=>x.id===sel.value);
+    if(!v){ alert('Cupom não encontrado.'); return; }
+    printVenda(v);
+  };
+
+  document.getElementById('limpar').onclick=()=>{ resetPDV(false); };
+
+  /* Init */
+  (function init(){
+    fillClientes('');
+    fillCatalog('');
+    fillServ();
+    resetCompraData();
+    document.getElementById('modalTipo').classList.remove('open');
+    document.getElementById('modalCupons').classList.remove('open');
+    document.getElementById('modalData').classList.remove('open');
+  })();
+});
+</script>
+
+</body>
+</html>

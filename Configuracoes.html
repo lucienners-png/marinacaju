@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marina Caju — Configurações</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  #menuBtn{ text-decoration:none !important; }
+  header .brand img#logo{ height:40px; width:auto; display:block; }
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  input{width:100%;font-size:.98rem}
+  .footer-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  .muted{color:var(--muted);font-size:.9rem}
+  .subheadline{font-size:1rem;font-weight:600;margin-top:20px;margin-bottom:4px}
+  ul.log{margin-top:8px;padding-left:18px;font-size:.9rem}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <img id="logo" alt="Logo" src="../assets/logo.png">
+    <div>
+      <div class="title">Marina Caju — Sistema Interno</div>
+      <div class="small">Configurações</div>
+    </div>
+  </div>
+  <div class="right">
+    <a class="btn brand" id="menuBtn" href="../index.html">Menu</a>
+  </div>
+</header>
+
+<main>
+
+<div class="card">
+  <div class="row" style="gap:8px;align-items:center;">
+    <div class="badge">Preços</div>
+    <div class="small muted">Valores usados no fechamento mensal e PDV</div>
+  </div>
+
+  <div class="grid" style="margin-top:16px;">
+    <div>
+      <label>Gasolina (R$/L)</label>
+      <input id="gasolina" inputmode="decimal">
+    </div>
+    <div>
+      <label>Jet (R$)</label>
+      <input id="jet" inputmode="decimal">
+    </div>
+    <div>
+      <label>Canoa (R$)</label>
+      <input id="canoa" inputmode="decimal">
+    </div>
+    <div>
+      <label>VCat Pontoon — extra/pé (R$)</label>
+      <input id="pontoon" inputmode="decimal">
+    </div>
+  </div>
+
+  <div class="subheadline">Lanchas</div>
+
+  <div class="grid" style="margin-top:8px;">
+    <div>
+      <label>Até 24 pés (R$)</label>
+      <input id="faixa0" inputmode="decimal">
+    </div>
+    <div>
+      <label>24 a 29 pés (R$)</label>
+      <input id="faixa1" inputmode="decimal">
+    </div>
+    <div>
+      <label>29 a 34 pés (R$)</label>
+      <input id="faixa2" inputmode="decimal">
+    </div>
+    <div>
+      <label>34 a 39 pés (R$)</label>
+      <input id="faixa3" inputmode="decimal">
+    </div>
+    <div>
+      <label>39 a 44 pés (R$)</label>
+      <input id="faixa4" inputmode="decimal">
+    </div>
+  </div>
+
+  <div class="footer-actions">
+    <button class="btn brand" id="salvar">Salvar</button>
+    <button class="btn ghost" id="padrao">Restaurar padrões</button>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="row" style="gap:8px;align-items:center;">
+    <div class="badge">Sistema</div>
+    <div class="small muted">Backup e restauração</div>
+  </div>
+
+  <div class="row" style="gap:8px;margin-top:16px;">
+    <button class="btn brand" id="backupBtn">📥 Backup Geral</button>
+    <button class="btn ghost" id="restoreBtn">♻️ Restaurar Backup</button>
+    <input type="file" id="restoreFile" accept=".json" hidden>
+  </div>
+
+  <div class="subheadline">Histórico de Backups</div>
+  <ul class="log" id="backupLog"></ul>
+</div>
+
+</main>
+
+<script>
+/* ===== CONFIG ===== */
+const K='mc_config';
+const LOG_KEY='mc_backup_log';
+const RESTORE_PASSWORD='marinacaju@2026';
+const SCHEMA_VERSION='1.0.0';
+const REQUIRED_KEYS=['mc_config'];
+
+const PADRAO={
+  combustiveis:{ gasolina:8.5 },
+  embarcacao:{ jet:600,canoa:700,pontoon_extra_por_pe:5,lanchas:[55,60,65,70,75] }
+};
+
+/* ===== UTILS ===== */
+async function sha256(str){
+  const buf=new TextEncoder().encode(str);
+  const hash=await crypto.subtle.digest('SHA-256',buf);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+const fmtBR=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const toNumberBR=s=>Number(String(s||0).replace(/\./g,'').replace(',','.'))||0;
+const maskBR=n=>fmtBR.format(n).replace('R$','').trim();
+
+/* ===== CONFIG UI ===== */
+function load(){ try{return JSON.parse(localStorage.getItem(K))||PADRAO}catch{return PADRAO} }
+function render(){
+  const c=load();
+  gasolina.value=maskBR(c.combustiveis.gasolina);
+  jet.value=maskBR(c.embarcacao.jet);
+  canoa.value=maskBR(c.embarcacao.canoa);
+  pontoon.value=maskBR(c.embarcacao.pontoon_extra_por_pe);
+  c.embarcacao.lanchas.forEach((v,i)=>document.getElementById('faixa'+i).value=maskBR(v));
+}
+salvar.onclick=()=>{localStorage.setItem(K,JSON.stringify({
+  combustiveis:{ gasolina:toNumberBR(gasolina.value) },
+  embarcacao:{
+    jet:toNumberBR(jet.value),
+    canoa:toNumberBR(canoa.value),
+    pontoon_extra_por_pe:toNumberBR(pontoon.value),
+    lanchas:[0,1,2,3,4].map(i=>toNumberBR(document.getElementById('faixa'+i).value))
+  }
+}));alert('Configurações salvas.');};
+padrao.onclick=()=>{localStorage.setItem(K,JSON.stringify(PADRAO));render();};
+
+/* ===== BACKUP ===== */
+function logBackup(nome){
+  const log=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
+  log.unshift({nome,data:new Date().toLocaleString('pt-BR')});
+  localStorage.setItem(LOG_KEY,JSON.stringify(log.slice(0,20)));
+  renderLog();
+}
+
+backupBtn.onclick=async()=>{
+  const rawData={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    try{rawData[k]=JSON.parse(localStorage.getItem(k))}
+    catch{rawData[k]=localStorage.getItem(k)}
+  }
+
+  for(const k of REQUIRED_KEYS){
+    if(!(k in rawData)){
+      alert('Backup cancelado: chave obrigatória ausente ('+k+')');
+      return;
+    }
+  }
+
+  const payload={
+    _meta:{
+      schemaVersion:SCHEMA_VERSION,
+      generatedAt:new Date().toISOString()
+    },
+    data:rawData
+  };
+
+  const hash=await sha256(JSON.stringify(payload.data));
+  payload._meta.hash=hash;
+
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const d=new Date();
+  const nome=`backup_marina_caju_${d.toISOString().slice(0,16).replace(/[:T]/g,'-')}.json`;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=nome;
+  a.click();
+  logBackup(nome);
+};
+
+/* ===== RESTORE ===== */
+restoreBtn.onclick=()=>{
+  for(let i=1;i<=3;i++){
+    const s=prompt('Digite a senha para restaurar o backup:');
+    if(s===RESTORE_PASSWORD){
+      if(confirm('Isso apagará os dados atuais. Continuar?')) restoreFile.click();
+      return;
+    }
+    alert('Senha incorreta.');
+  }
+  alert('Restore bloqueado.');
+};
+
+restoreFile.onchange=e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=async()=>{
+    try{
+      const payload=JSON.parse(r.result);
+      if(!payload._meta || payload._meta.schemaVersion!==SCHEMA_VERSION){
+        alert('Backup incompatível com esta versão do sistema.');
+        return;
+      }
+      const recalculated=await sha256(JSON.stringify(payload.data));
+      if(recalculated!==payload._meta.hash){
+        alert('Backup corrompido ou alterado.');
+        return;
+      }
+      localStorage.clear();
+      Object.keys(payload.data).forEach(k=>{
+        localStorage.setItem(k,JSON.stringify(payload.data[k]));
+      });
+      alert('Backup restaurado com sucesso.');
+      location.reload();
+    }catch{
+      alert('Arquivo inválido.');
+    }
+  };
+  r.readAsText(file);
+};
+
+/* ===== LOG ===== */
+function renderLog(){
+  const log=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');
+  backupLog.innerHTML=log.length
+    ? log.map(l=>`<li>${l.data} — ${l.nome}</li>`).join('')
+    : '<li>Nenhum backup registrado.</li>';
+}
+
+/* BOOT */
+render();
+renderLog();
+logo.onerror=()=>logo.removeAttribute('src');
+</script>
+
+</body>
+</html>

@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Produtos & Estoque</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img id="logo" alt="Logo" src="../assets/logo.png">
+    <div>
+      <div class="title">Marina Caju — Sistema Interno</div>
+      <div class="small">Produtos & Estoque</div>
+    </div>
+  </div>
+  <div class="right">
+    <a class="btn brand" id="menuBtn" href="../index.html">Menu</a>
+  </div>
+</header>
+
+<main>
+  <!-- Abas -->
+  <div class="tabs">
+    <button class="tab active" data-tab="entrada">Entrada de estoque</button>
+    <button class="tab" data-tab="catalogo">Catálogo</button>
+    <button class="tab" data-tab="historico">Histórico</button>
+  </div>
+
+  <!-- ===== ENTRADA ===== -->
+  <div class="card titlecard" id="title_entrada">
+    <span class="badge">Entrada de estoque</span>
+  </div>
+
+  <div class="card cardpane" id="pane_entrada">
+    <div class="grid">
+      <div>
+        <label>Código de barras / SKU (opcional)</label>
+        <input id="e_bar" placeholder="Escaneie aqui ou deixe em branco" autocomplete="off">
+      </div>
+      <div>
+        <label>Produto</label>
+        <select id="e_prod"></select>
+      </div>
+      <div>
+        <label>Quantidade</label>
+        <input id="e_qtd" placeholder="Ex.: 24" inputmode="numeric">
+      </div>
+      <div>
+        <label>Data</label>
+        <input id="e_data" type="date">
+      </div>
+      <div class="col-span-2">
+        <label>Fornecedor (opcional)</label>
+        <input id="e_forn" placeholder="Atacadão, Assaí...">
+      </div>
+    </div>
+  </div>
+
+  <div class="actioncard" id="actions_entrada">
+    <button class="btn brand" id="e_lancar">Lançar</button>
+    <button class="btn ghost sm" id="btnNovoProd">Novo produto</button>
+    <button class="btn ghost" id="e_limpar">Limpar</button>
+  </div>
+
+  <!-- ===== CATÁLOGO ===== -->
+  <div class="card titlecard" id="title_catalogo" style="display:none">
+    <span class="badge">Catálogo</span>
+    <span class="muted">Edite preços, custos e visualize estoque.</span>
+  </div>
+
+  <div class="card cardpane" id="pane_catalogo" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
+      <input id="filtro" placeholder="Buscar produto..." style="min-width:240px">
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost sm" id="btnExpCSV">Exportar CSV</button>
+        <button class="btn ghost sm" id="btnImpCSV">Importar CSV</button>
+        <input type="file" id="fileCSV" accept=".csv,text/csv" style="display:none">
+      </div>
+    </div>
+
+    <table class="table" id="tbl">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th class="num">Preço</th>
+          <th class="num">Custo</th>
+          <th class="num">Margem %</th>
+          <th class="num">Estoque</th>
+          <th>SKU</th>
+          <th class="actions"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="muted" style="margin-top:8px">* Estoque calculado a partir de movimentos</div>
+  </div>
+
+  <!-- ===== HISTÓRICO ===== -->
+  <div class="card titlecard" id="title_historico" style="display:none">
+    <span class="badge">Histórico de entradas</span>
+    <span class="muted">Últimas movimentações de entrada.</span>
+  </div>
+
+  <div class="card cardpane" id="pane_historico" style="display:none">
+    <table class="table" id="tbl_hist">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Produto</th>
+          <th class="num">Qtd</th>
+          <th>Fornecedor</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- ===== MODAL NOVO PRODUTO ===== -->
+<div class="backdrop" id="modalBackdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <header>
+      <div class="title" id="modalTitle">Cadastrar novo produto</div>
+      <button class="btn ghost sm" id="btnFecharModal">Fechar</button>
+    </header>
+    <div class="body">
+      <div class="grid">
+        <div>
+          <label>Nome</label>
+          <input id="np_nome" placeholder="Ex.: Coca-Cola Lata 350ml" autocomplete="off">
+        </div>
+        <div>
+          <label>Preço de venda (R$)</label>
+          <input id="np_preco" placeholder="6,50" inputmode="decimal" autocomplete="off">
+        </div>
+        <div>
+          <label>Custo (R$)</label>
+          <input id="np_custo" placeholder="4,00" inputmode="decimal" autocomplete="off">
+        </div>
+        <div>
+          <label>Código de barras / SKU (opcional)</label>
+          <input id="np_bar" placeholder="Se tiver, informe" autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="btnCancelarModal">Cancelar</button>
+      <button class="btn brand" id="btnSalvarProduto">Salvar produto</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* === STORAGE KEYS === */
+const K_PROD='mc_produtos';
+const K_BAR='mc_prod_bar_index';
+const K_MOV='mc_mov_estoque';
+
+/* === HELPERS === */
+function load(k,def){try{return JSON.parse(localStorage.getItem(k))||def}catch{return def}}
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function uuid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+function parseBR(n){if(n==null||n==='')return 0; return parseFloat(String(n).replace(/\./g,'').replace(',','.'))||0}
+function fmtBR(n){return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function pct(n){return (Number(n)||0).toFixed(2)+'%'}
+const $=s=>document.querySelector(s)
+
+/* === PRODUCTS === */
+function loadProd(){return load(K_PROD,[])}
+function saveProd(v){
+  save(K_PROD,v)
+  const idx=Object.fromEntries(v.filter(x=>x.bar && x.bar.trim()!=='').map(x=>[x.bar,x.id]))
+  save(K_BAR,idx)
+}
+function getProdById(id){return loadProd().find(p=>p.id===id)}
+function getProdIdByBarcode(code){const idx=load(K_BAR,{}); return idx[code]||null}
+
+/* === STOCK (movimentos) === */
+function loadMov(){return load(K_MOV,[])}
+function saveMov(v){save(K_MOV,v)}
+function estoque(prodId){return loadMov().filter(m=>m.produtoId===prodId).reduce((s,m)=>s+(m.delta||0),0)}
+
+/* === MODAL === */
+function openNewProductModal(prefillBar=''){
+  $('#np_nome').value=''; $('#np_preco').value=''; $('#np_custo').value='';
+  $('#np_bar').value=prefillBar||'';
+  const bd = document.getElementById('modalBackdrop');
+  bd.classList.add('show');
+  bd.setAttribute('aria-hidden','false');
+  setTimeout(()=>$('#np_nome').focus(),50);
+}
+function closeNewProductModal(){
+  const bd = document.getElementById('modalBackdrop');
+  bd.classList.remove('show');
+  bd.setAttribute('aria-hidden','true');
+}
+document.getElementById('btnNovoProd').onclick=()=>openNewProductModal($('#e_bar').value.trim());
+document.getElementById('btnFecharModal').onclick=closeNewProductModal;
+document.getElementById('btnCancelarModal').onclick=closeNewProductModal;
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && document.getElementById('modalBackdrop').classList.contains('show')){ closeNewProductModal(); } });
+
+document.getElementById('btnSalvarProduto').onclick=()=>{
+  const nome=($('#np_nome').value||'').trim();
+  const preco=parseBR($('#np_preco').value);
+  const custo=parseBR($('#np_custo').value);
+  const bar=($('#np_bar').value||'').trim();
+  if(!nome){alert('Informe o nome.'); return}
+  if(preco<=0){alert('Preço inválido.'); return}
+
+  const prods=loadProd();
+  if(bar){
+    const conflict=prods.find(p=>p.bar===bar);
+    if(conflict){ alert('Este código já está em uso.'); return }
+  }
+  const newId=uuid();
+  prods.push({id:newId,nome,bar,preco,custo});
+  saveProd(prods);
+
+  closeNewProductModal();
+  fillEntrada();
+  $('#e_prod').value=newId;
+  if(bar && !$('#e_bar').value.trim()) $('#e_bar').value=bar;
+  $('#e_qtd').focus();
+}
+
+/* === ABAS === */
+function showTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active')
+
+  ;['entrada','catalogo','historico'].forEach(s=>{
+    const t=document.getElementById('title_'+s); if(t) t.style.display='none'
+    const p=document.getElementById('pane_'+s);  if(p) p.style.display='none'
+    const a=document.getElementById('actions_'+s); if(a) a.style.display='none'
+  })
+
+  const t2=document.getElementById('title_'+tab); if(t2) t2.style.display='flex'
+  const p2=document.getElementById('pane_'+tab);  if(p2) p2.style.display='block'
+  const a2=document.getElementById('actions_'+tab); if(a2) a2.style.display='flex'
+
+  if(tab==='entrada')  fillEntrada()
+  if(tab==='catalogo') renderCatalog()
+  if(tab==='historico')renderHist()
+}
+document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>showTab(btn.dataset.tab))
+
+/* === ENTRADA === */
+function fillEntrada(){
+  const sel=$('#e_prod')
+  sel.innerHTML=''
+
+  const opt0=document.createElement('option')
+  opt0.value=''
+  opt0.textContent='Selecione...'
+  sel.appendChild(opt0)
+
+  loadProd().slice().sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(p=>{
+    const o=document.createElement('option')
+    o.value=p.id
+    o.textContent=p.nome
+    sel.appendChild(o)
+  })
+
+  sel.value=''
+
+  $('#e_data').value=new Date().toISOString().slice(0,10)
+  $('#e_qtd').value=''; $('#e_forn').value='';
+}
+
+/* Scan */
+$('#e_bar').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return
+  const code=$('#e_bar').value.trim()
+  if(!code){ $('#e_prod').focus(); return }
+  const id=getProdIdByBarcode(code)
+  if(id){
+    $('#e_prod').value=id
+    $('#e_qtd').focus()
+  } else {
+    if(confirm('Código não cadastrado. Criar novo produto agora?')){
+      openNewProductModal(code)
+    }else{
+      $('#e_prod').focus()
+    }
+  }
+})
+
+/* Lançar entrada */
+document.getElementById('e_lancar').onclick=()=>{
+  const prodId=$('#e_prod').value||null
+  const qtd=parseInt($('#e_qtd').value)||0
+  const dataStr=$('#e_data').value
+  const fornecedor=$('#e_forn').value||''
+  if(!prodId){alert('Selecione um produto.'); return}
+  if(qtd<=0){alert('Qtd inválida.'); return}
+  if(!dataStr){alert('Data obrigatória.'); return}
+
+  const mov=loadMov()
+  mov.push({id:uuid(),produtoId:prodId,delta:qtd,ts:new Date(dataStr+'T12:00:00').getTime(),fornecedor})
+  saveMov(mov)
+
+  renderCatalog(); renderHist();
+  alert('Entrada registrado!')
+  $('#e_qtd').value=''; $('#e_forn').value=''; $('#e_bar').value='';
+  $('#e_prod').value='';
+  $('#e_bar').focus()
+}
+
+/* Limpar */
+document.getElementById('e_limpar').onclick=()=>{
+  $('#e_bar').value=''; $('#e_qtd').value=''; $('#e_forn').value='';
+  $('#e_prod').value='';
+  $('#e_bar').focus();
+}
+
+/* === HISTÓRICO === */
+function renderHist(){
+  const tb=$('#tbl_hist tbody')
+  tb.innerHTML=''
+  const prods=loadProd()
+
+  loadMov().filter(m=>m.delta>0).sort((a,b)=>b.ts-a.ts).forEach(m=>{
+    const p=prods.find(x=>x.id===m.produtoId)
+    const d=new Date(m.ts)
+    const tr=document.createElement('tr')
+    tr.innerHTML=`
+      <td>${d.toLocaleDateString()}</td>
+      <td>${p?p.nome:'—'}</td>
+      <td class="num">${m.delta}</td>
+      <td>${m.fornecedor||''}</td>`
+    tb.appendChild(tr)
+  })
+}
+
+/* === CATÁLOGO === */
+$('#filtro').oninput=renderCatalog
+function renderCatalog(){
+  const tb=document.querySelector('#tbl tbody')
+  tb.innerHTML=''
+  const f=($('#filtro').value||'').toLowerCase()
+  const prods=loadProd().slice().sort((a,b)=> a.nome.localeCompare(b.nome))
+
+  prods.filter(p=>!f||p.nome.toLowerCase().includes(f)).forEach(p=>{
+    const lucro=(p.preco-p.custo>0)?(p.preco-p.custo):0
+    const margem=p.preco>0?(lucro/p.preco*100):0
+    const est=estoque(p.id)
+
+    const tr=document.createElement('tr')
+    tr.innerHTML=`
+      <td>${p.nome}</td>
+      <td class="num">${fmtBR(p.preco)}</td>
+      <td class="num">${fmtBR(p.custo)}</td>
+      <td class="num">${pct(margem)}</td>
+      <td class="num">${est}</td>
+      <td>${p.bar||''}</td>
+      <td class="actions">
+        <button class="btn ghost sm" data-edit="${p.id}">Editar</button>
+        <button class="btn danger sm" data-del="${p.id}">Excluir</button>
+      </td>
+    `
+    tb.appendChild(tr)
+  })
+}
+
+/* Editar / Excluir no Catálogo */
+document.addEventListener('click',e=>{
+  const idEdit=e.target.dataset?.edit
+  const idDel=e.target.dataset?.del
+
+  if(idEdit){
+    const p=getProdById(idEdit)
+    if(!p)return
+    const nome=prompt("Nome do produto:", p.nome); if(nome==null) return
+    const preco=prompt("Preço (R$):", String(p.preco)); if(preco==null) return
+    const custo=prompt("Custo (R$):", String(p.custo)); if(custo==null) return
+    const bar=prompt("Código de barras / SKU (opcional):", p.bar||''); if(bar==null) return
+
+    const prods=loadProd()
+    if(bar){
+      const conflict=prods.find(x=>x.bar===bar && x.id!==p.id)
+      if(conflict){ alert("Código já usado por outro produto."); return }
+    }
+    const ix=prods.findIndex(x=>x.id===p.id)
+    prods[ix]={...p,nome:nome.trim(),preco:parseBR(preco),custo:parseBR(custo),bar:bar.trim()}
+    saveProd(prods)
+    renderCatalog()
+  }
+
+  if(idDel){
+    if(!confirm("Excluir produto e todo estoque dele?"))return
+    saveProd(loadProd().filter(p=>p.id!==idDel))
+    saveMov(loadMov().filter(m=>m.produtoId!==idDel))
+    renderCatalog()
+    renderHist()
+  }
+})
+
+/* === CSV === */
+function toCSVValue(v){const s=(v==null?'':String(v));return `"${s.replace(/"/g,'""')}"`}
+function produtosToCSV(){
+  const prods=loadProd().slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+  const linhas=[]; linhas.push(['id','bar','nome','preco','custo','estoque'].join(';'))
+  prods.forEach(p=>{
+    const est=estoque(p.id)
+    linhas.push([p.id,p.bar||'',p.nome||'',Number(p.preco||0),Number(p.custo||0),est].map(toCSVValue).join(';'))
+  })
+  return linhas.join('\n')
+}
+function baixarCSV(nome,conteudo){
+  const blob=new Blob([conteudo],{type:'text/csv;charset=utf-8;'})
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome; a.click(); URL.revokeObjectURL(a.href)
+}
+function parseCSV(text){
+  const sep=(text.indexOf(';')>-1 && (text.match(/;/g)||[]).length>=(text.match(/,/g)||[]).length)?';':','
+  const linhas=text.split(/\r?\n/).filter(l=>l.trim().length>0)
+  if(!linhas.length) return {headers:[],rows:[]}
+  const headers=splitCSVLine(linhas[0],sep).map(h=>h.trim().toLowerCase())
+  const rows=linhas.slice(1).map(l=>splitCSVLine(l,sep))
+  return {sep,headers,rows}
+}
+function splitCSVLine(line,sep){
+  const out=[];let cur='';let inQ=false
+  for(let i=0;i<line.length;i++){
+    const ch=line[i]
+    if(ch==='"'){ if(inQ && line[i+1]==='"'){cur+='"';i++;} else inQ=!inQ }
+    else if(ch===sep && !inQ){ out.push(cur); cur='' }
+    else cur+=ch
+  } out.push(cur); return out
+}
+function strToNumberBR(v){
+  if(v==null||v==='') return null
+  const t=String(v).trim(); if(t==='') return null
+  return parseFloat(t.replace(/\./g,'').replace(',','.'))
+}
+function importarCSVTexto(text){
+  const {headers,rows}=parseCSV(text)
+  const pos={id:headers.indexOf('id'),bar:headers.indexOf('bar'),nome:headers.indexOf('nome'),preco:headers.indexOf('preco'),custo:headers.indexOf('custo')}
+  const prods=loadProd(); let atualizados=0,inseridos=0
+  rows.forEach(cols=>{
+    const id=pos.id>=0?(cols[pos.id]||'').trim():''; const bar=pos.bar>=0?(cols[pos.bar]||'').trim():''
+    const nome=pos.nome>=0?(cols[pos.nome]||'').trim():''; const preco=pos.preco>=0?strToNumberBR(cols[pos.preco]):null
+    const custo=pos.custo>=0?strToNumberBR(cols[pos.custo]):null
+    let ix=-1; if(id) ix=prods.findIndex(p=>p.id===id); if(ix<0 && bar) ix=prods.findIndex(p=>(p.bar||'')===bar)
+    if(ix>=0){
+      const p={...prods[ix]}; if(bar) p.bar=bar; if(nome) p.nome=nome;
+      if(preco!=null&&!isNaN(preco)) p.preco=Number(preco); if(custo!=null&&!isNaN(custo)) p.custo=Number(custo);
+      prods[ix]=p; atualizados++;
+    }else{
+      if(!nome) return;
+      prods.push({id:id||uuid(),bar,nome,preco:(preco!=null&&!isNaN(preco))?Number(preco):0,custo:(custo!=null&&!isNaN(custo))?Number(custo):0});
+      inseridos++;
+    }
+  })
+  saveProd(prods); renderCatalog(); alert(`Importação concluída.\nAtualizados: ${atualizados}\nInseridos: ${inseridos}`)
+}
+document.getElementById('btnExpCSV').onclick=()=>baixarCSV('produtos_marina.csv',produtosToCSV())
+document.getElementById('btnImpCSV').onclick=()=>document.getElementById('fileCSV').click()
+document.getElementById('fileCSV').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return
+  const reader=new FileReader(); reader.onload=()=>importarCSVTexto(reader.result); reader.readAsText(f,'utf-8'); e.target.value=''
+})
+
+/* INIT */
+showTab('entrada');
+</script>
+</body>
+</html>

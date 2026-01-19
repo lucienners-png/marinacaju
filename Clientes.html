@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marina Caju — Clientes</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <img id="logo" src="../assets/logo.png" alt="Logo">
+    <div>
+      <div class="title">Marina Caju — Sistema Interno</div>
+      <div class="small">Clientes</div>
+    </div>
+  </div>
+  <div class="right">
+    <a class="btn brand" id="menuBtn" href="../index.html">Menu</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ===== CADASTRO ===== -->
+  <div class="card titlecard">
+    <span class="badge">Cadastro de cliente</span>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label>Nome</label>
+        <input id="c_nome" placeholder="Ex: Arnaldo">
+      </div>
+      <div>
+        <label>Telefone</label>
+        <input id="c_tel" placeholder="(xx) xxxxx-xxxx">
+      </div>
+      <div>
+        <label>Documento</label>
+        <input id="c_doc" placeholder="CPF/CNPJ/RG">
+      </div>
+      <div>
+        <label>Tipo</label>
+        <!-- ✅ Placeholder igual Produtos -->
+        <select id="c_tipo" required>
+          <option value="" disabled selected>Selecione...</option>
+          <option>Morador</option>
+          <option>Funcionário</option>
+          <option>Visitante</option>
+          <option>Proprietário</option>
+        </select>
+      </div>
+
+      <div class="col-span-2">
+        <label>E-mail</label>
+        <input id="c_email" placeholder="cliente@email">
+      </div>
+
+      <div class="col-span-2">
+        <label>Observação</label>
+        <input id="c_obs" placeholder="Notas internas">
+      </div>
+    </div>
+
+    <!-- Ações dentro do mesmo card -->
+    <div class="row" style="justify-content:flex-end; gap:8px; margin-top:12px;">
+      <button class="btn brand" id="c_salvar">Salvar</button>
+      <button class="btn ghost" id="c_limpar">Limpar</button>
+    </div>
+  </div>
+
+  <!-- ===== LISTA ===== -->
+  <div class="card titlecard">
+    <span class="badge">Clientes cadastrados</span>
+
+    <div class="row" style="gap:8px">
+      <input id="importCSV" type="file" accept=".csv" style="display:none">
+      <button class="btn ghost sm" id="btnImportCSV">Importar CSV</button>
+      <button class="btn ghost sm" id="btnExportCSV">Exportar CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <table id="tblClientes" class="table">
+      <thead>
+        <tr>
+          <th class="sortable" data-sort="nome">Nome ▲</th>
+          <th>Telefone</th>
+          <th>E-mail</th>
+          <th class="actions">Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- ===== MODAL (backdrop custom) ===== -->
+<div class="backdrop" id="infoBackdrop" aria-hidden="true">
+  <div class="modal">
+    <header>
+      <div class="title" id="infoTitle">Cliente</div>
+      <button class="btn ghost sm" id="infoClose">Fechar</button>
+    </header>
+
+    <div class="body">
+      <div class="grid">
+        <div><span class="muted">Nome</span></div>       <div id="i_nome"></div>
+        <div><span class="muted">Telefone</span></div>   <div id="i_tel"></div>
+        <div><span class="muted">Documento</span></div>  <div id="i_doc"></div>
+        <div><span class="muted">E-mail</span></div>     <div id="i_email"></div>
+        <div><span class="muted">Tipo</span></div>       <div id="i_tipo"></div>
+        <div class="col-span-2"><span class="muted">Observação</span></div>
+        <div class="col-span-2" id="i_obs"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn ghost sm" id="infoClose2">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* === STORAGE KEYS === */
+const K_CLI='mc_clientes';
+const K_SORT='mc_clientes_sort';
+
+/* === HELPERS === */
+function load(k,def){ try{const v=JSON.parse(localStorage.getItem(k));return v ?? def;}catch{return def;} }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+function uuid(){ return crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)+Date.now().toString(36); }
+
+function normStr(s){ return (s||'').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function onlyDigits(s){ return (s||'').replace(/\D+/g,''); }
+
+/* SORT */
+function getSort(){ return load(K_SORT,{key:'nome',dir:'asc'}); }
+function setSort(key,dir){ save(K_SORT,{key,dir}); }
+function sortList(list){
+  const {key,dir}=getSort(); const mult=dir==='asc'?1:-1;
+  return list.slice().sort((a,b)=>{
+    const va=normStr(a[key] || '');
+    const vb=normStr(b[key] || '');
+    if(va<vb) return -1*mult;
+    if(va>vb) return 1*mult;
+    return 0;
+  });
+}
+function renderSortHeader(){
+  const {dir}=getSort();
+  const th=document.querySelector('th[data-sort="nome"]');
+  if(th) th.textContent=`Nome ${dir==='asc'?'▲':'▼'}`;
+}
+
+/* LISTA */
+function renderClientes(){
+  const tbody=document.querySelector("#tblClientes tbody");
+  tbody.innerHTML="";
+  const lista=sortList(load(K_CLI,[]));
+
+  lista.forEach(c=>{
+    const email = (c.email||'-').replace(/"/g,'&quot;');
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${c.nome}</td>
+      <td>${c.tel||'-'}</td>
+      <td class="email" title="${email}">${email}</td>
+      <td class="actions">
+        <button class="btn ghost xs action" data-info="${c.id}">Ver mais</button>
+        <button class="btn ghost xs action" data-edit="${c.id}">Editar</button>
+        <button class="btn danger xs action" data-del="${c.id}">Excluir</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  renderSortHeader();
+}
+
+/* FORM */
+function limparForm(){
+  c_nome.value=""; c_tel.value=""; c_email.value=""; c_doc.value="";
+  c_tipo.value=""; /* ✅ volta pro placeholder "Selecione..." */
+  c_obs.value="";
+  c_salvar.removeAttribute("data-id");
+}
+
+function findDuplicate(cli, list){
+  const nNome=normStr(cli.nome), nDoc=onlyDigits(cli.doc), nMail=normStr(cli.email);
+  return list.find(x=>{
+    if(x.id===cli.id) return false;
+    return (nNome && normStr(x.nome)===nNome)
+        || (nDoc && onlyDigits(x.doc||'')===nDoc)
+        || (nMail && normStr(x.email||'')===nMail);
+  });
+}
+
+c_salvar.onclick=()=>{
+  const nome=c_nome.value.trim();
+  if(!nome){ alert("Informe o nome do cliente."); return; }
+
+  /* ✅ exige seleção de Tipo */
+  if(!c_tipo.value){ alert("Selecione o tipo do cliente."); return; }
+
+  const cli={
+    id: c_salvar.dataset.id || uuid(),
+    nome,
+    tel: c_tel.value.trim(),
+    email: c_email.value.trim(),
+    doc: c_doc.value.trim(),
+    tipo: c_tipo.value,
+    obs: c_obs.value.trim()
+  };
+
+  const lista=load(K_CLI,[]);
+  const dup=findDuplicate(cli,lista);
+
+  if(dup){
+    const ok=confirm("Já existe cadastro com mesmo Nome/Documento/E-mail.\nCarregar existente?");
+    if(ok){
+      c_nome.value=dup.nome;
+      c_tel.value=dup.tel||"";
+      c_email.value=dup.email||"";
+      c_doc.value=dup.doc||"";
+      c_tipo.value=dup.tipo||""; /* ✅ respeita placeholder */
+      c_obs.value=dup.obs||"";
+      c_salvar.dataset.id=dup.id;
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+    return;
+  }
+
+  const ix=lista.findIndex(x=>x.id===cli.id);
+  if(ix>=0) lista[ix]=cli;
+  else lista.push(cli);
+
+  save(K_CLI,lista);
+  limparForm();
+  renderClientes();
+};
+
+c_limpar.onclick=limparForm;
+
+/* SORT CLICK */
+document.querySelector('th[data-sort="nome"]').onclick=()=>{
+  const s=getSort();
+  setSort('nome', s.dir==='asc'?'desc':'asc');
+  renderClientes();
+};
+
+/* MODAL */
+const infoBD=document.getElementById('infoBackdrop');
+function openInfo(){ infoBD.classList.add('show'); infoBD.setAttribute('aria-hidden','false'); }
+function closeInfo(){ infoBD.classList.remove('show'); infoBD.setAttribute('aria-hidden','true'); }
+infoClose.onclick=closeInfo;
+infoClose2.onclick=closeInfo;
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && infoBD.classList.contains('show')) closeInfo();
+});
+
+/* CLIQUES DA LISTA */
+document.addEventListener("click",e=>{
+  if(e.target.dataset.info){
+    const id=e.target.dataset.info;
+    const cli=load(K_CLI,[]).find(c=>c.id===id);
+    if(!cli) return;
+
+    infoTitle.textContent=cli.nome;
+    i_nome.textContent=cli.nome;
+    i_tel.textContent=cli.tel||'-';
+    i_doc.textContent=cli.doc||'-';
+    i_email.textContent=cli.email||'-';
+    i_tipo.textContent=cli.tipo||'-';
+    i_obs.textContent=cli.obs||'-';
+
+    openInfo();
+  }
+
+  if(e.target.dataset.edit){
+    const id=e.target.dataset.edit;
+    const cli=load(K_CLI,[]).find(c=>c.id===id);
+    if(!cli) return;
+
+    c_nome.value=cli.nome;
+    c_tel.value=cli.tel||"";
+    c_email.value=cli.email||"";
+    c_doc.value=cli.doc||"";
+    c_tipo.value=cli.tipo||""; /* ✅ mostra placeholder se vazio */
+    c_obs.value=cli.obs||"";
+
+    c_salvar.dataset.id=id;
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  if(e.target.dataset.del){
+    const id=e.target.dataset.del;
+    if(!confirm("Excluir cliente?")) return;
+    const lista=load(K_CLI,[]).filter(c=>c.id!==id);
+    save(K_CLI,lista);
+    renderClientes();
+  }
+});
+
+/* CSV */
+function download(filename,content){
+  const blob=new Blob([content],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),0);
+}
+function toCSV(arr,header){
+  return [header.join(',')]
+    .concat(arr.map(c=>header.map(h=>`"${(c[h]??'').replace(/"/g,'""')}"`).join(',')))
+    .join('\n');
+}
+
+btnExportCSV.onclick=()=>{
+  const lista=load(K_CLI,[]);
+  download('clientes_marina.csv',toCSV(lista,['id','nome','tel','email','doc','tipo','obs']));
+};
+btnImportCSV.onclick=()=>importCSV.click();
+
+importCSV.onchange=async e=>{
+  const file=e.target.files[0];
+  if(!file) return;
+
+  const text=await file.text();
+  const lines=text.split('\n').filter(l=>l.trim());
+  if(!lines.length) return alert("CSV inválido.");
+
+  const headers=lines[0].toLowerCase().split(',');
+  const rows=lines.slice(1).map(l=>l.split(','));
+  const idx=h=>headers.indexOf(h);
+
+  const atual=load(K_CLI,[]);
+  const mapa=new Map(atual.map(c=>[c.id,c]));
+
+  let novos=0, atualizados=0;
+
+  rows.forEach(r=>{
+    const c={
+      id:(r[idx('id')]||'').replace(/"/g,'') || uuid(),
+      nome:(r[idx('nome')]||'').replace(/"/g,''),
+      tel:(r[idx('tel')]||'').replace(/"/g,''),
+      email:(r[idx('email')]||'').replace(/"/g,''),
+      doc:(r[idx('doc')]||'').replace(/"/g,''),
+      tipo:(r[idx('tipo')]||'Morador').replace(/"/g,''), /* mantém default p/ import */
+      obs:(r[idx('obs')]||'').replace(/"/g,''),
+    };
+
+    if(mapa.has(c.id)){
+      mapa.set(c.id,{...mapa.get(c.id),...c});
+      atualizados++;
+    } else {
+      mapa.set(c.id,c);
+      novos++;
+    }
+  });
+
+  save(K_CLI,[...mapa.values()]);
+  renderClientes();
+  alert(`Importação concluída.\nNovos: ${novos}\nAtualizados: ${atualizados}`);
+  importCSV.value="";
+};
+
+/* INIT */
+renderClientes();
+</script>
+
+</body>
+</html>
