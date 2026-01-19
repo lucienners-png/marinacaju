@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marina Caju — Menu Principal</title>
+<link rel="stylesheet" href="assets/style.css">
+
+<style>
+  main{ max-width:1000px; margin:20px auto; }
+
+  /* ===== GRID ===== */
+  .menu-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+    align-items:stretch;
+  }
+  @media(max-width:1024px){
+    .menu-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media(max-width:640px){
+    .menu-grid{ grid-template-columns:1fr; }
+  }
+
+  /* ===== MINI-CARD ===== */
+  .menu-card{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    min-height:88px;
+    border-radius:12px;
+    background:var(--surface);
+    color:var(--text);
+    box-shadow:var(--card-shadow);
+    text-decoration:none;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .menu-card:hover{
+    transform:translateY(-2px);
+    box-shadow:0 10px 28px rgba(15,23,42,.10);
+  }
+
+  /* Ícone */
+  .menu-card .ico{
+    width:36px;height:36px;
+    flex:0 0 36px;
+    border-radius:10px;
+    display:grid;place-items:center;
+    font-size:18px;line-height:1;
+    background:color-mix(in oklab,var(--brand) 16%, white 84%);
+    color:var(--text);
+  }
+
+  /* Conteúdo */
+  .menu-card .content{
+    display:flex; flex-direction:column;
+    gap:3px; min-width:0;
+  }
+
+  /* ===== TÍTULO EM NEGRITO DESTACADO ===== */
+  .menu-card .title{
+    font-size:13px;
+    font-weight:700; /* mais forte */
+    color:var(--text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .menu-card .desc{
+    font-size:12px; color:var(--muted);
+    display:-webkit-box; -webkit-line-clamp:1;
+    -webkit-box-orient:vertical; overflow:hidden;
+  }
+
+  .menu-card .meta{
+    display:flex; align-items:center; gap:6px;
+  }
+  .menu-card .pill{
+    font-size:10px;
+    color:var(--muted);
+    background:#f3f4f6;
+    border-radius:999px;
+    padding:1px 6px;
+    white-space:nowrap;
+  }
+
+  
+  /* ===== RODAPÉ DISCRETO ===== */
+  footer{
+    margin-top:30px;
+    padding:10px 0;
+    text-align:center;
+  }
+  footer .small{
+    font-size:11px;
+    color:var(--muted);
+  }
+</style>
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    
+    <div>
+      <div class="title">Marina Caju — Sistema Interno</div>
+      <div class="small">Menu principal</div>
+    </div>
+  </div>
+  <div class="right">
+  
+</header>
+
+<main>
+
+  <div class="section">Operação</div>
+  <div class="menu-grid">
+
+    <a class="menu-card" href="modules/PDV.html">
+      <div class="ico">💳</div>
+      <div class="content">
+        <div class="title">PDV</div>
+        <div class="meta">
+          <span class="pill">Loja</span>
+          <span class="pill">Combustível</span>
+          <span class="pill">Serviços</span>
+        </div>
+        <div class="desc">Lançar vendas e gerar cupom.</div>
+      </div>
+    </a>
+
+    <a class="menu-card" href="modules/Fechamento.html">
+      <div class="ico" style="background:color-mix(in oklab,var(--accent) 90%, white 0%);color:#0d0631">📈</div>
+      <div class="content">
+        <div class="title">Relatórios & Fechamento</div>
+        <div class="desc">Cobrança mensal consolidada.</div>
+      </div>
+    </a>
+
+    <a class="menu-card" href="modules/EntradaCombustivel.html">
+      <div class="ico" style="background:color-mix(in oklab,var(--warn) 85%, white 0%);color:#3a2500">⛽</div>
+      <div class="content">
+        <div class="title">Entrada de Combustível</div>
+        <div class="desc">Registrar entrada de gasolina.</div>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="section" style="margin-top:20px">Cadastros</div>
+  <div class="menu-grid">
+
+    <a class="menu-card" href="modules/Clientes.html">
+      <div class="ico" style="background:color-mix(in oklab,#60a5fa 90%, white 0%);color:#071a37">👤</div>
+      <div class="content">
+        <div class="title">Clientes</div>
+        <div class="desc">Cadastro e gestão.</div>
+      </div>
+    </a>
+
+    <a class="menu-card" href="modules/Produtos.html">
+      <div class="ico">📦</div>
+      <div class="content">
+        <div class="title">Produtos</div>
+        <div class="desc">Itens da conveniência.</div>
+      </div>
+    </a>
+
+    <a class="menu-card" href="modules/Veiculos.html">
+      <div class="ico" style="background:color-mix(in oklab,#34d399 90%, white 0%);color:#062d13">🛥️</div>
+      <div class="content">
+        <div class="title">Veículos</div>
+        <div class="desc">Jets, lanchas, canoas.</div>
+      </div>
+    </a>
+
+    <a class="menu-card" href="modules/Servicos.html">
+      <div class="ico" style="background:color-mix(in oklab,#f472b6 90%, white 0%);color:#3b0a25">🛠️</div>
+      <div class="content">
+        <div class="title">Serviços</div>
+        <div class="desc">Tabela de serviços.</div>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="section" style="margin-top:20px">Sistema</div>
+  <div class="menu-grid">
+
+    <a class="menu-card" href="modules/Configuracoes.html">
+      <div class="ico" style="background:color-mix(in oklab,#e2e8f0 90%, white 0%);color:#0f172a">⚙️</div>
+      <div class="content">
+        <div class="title">Configurações</div>
+        <div class="desc">Parâmetros e preços.</div>
+      </div>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  <div class="small">© Marina Caju — Sistema interno. Criado por Lucienne Rodrigues</div>
+</footer>
+
+
+
+</body>
+</html>
